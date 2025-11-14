@@ -83,35 +83,119 @@ export default function Report() {
         throw new Error('Элемент отчёта не найден')
       }
 
-      // Показываем элемент для захвата
+      // Показываем элемент для захвата с правильным позиционированием
+      const originalDisplay = element.style.display
+      const originalPosition = element.style.position
+      const originalLeft = element.style.left
+      const originalTop = element.style.top
+      const originalWidth = element.style.width
+      const originalZIndex = element.style.zIndex
+
       element.style.display = 'block'
+      element.style.position = 'relative'
+      element.style.left = '0'
+      element.style.top = '0'
+      element.style.width = '800px' // Фиксированная ширина для консистентности
+      element.style.zIndex = '9999'
+      element.style.backgroundColor = 'white'
+
+      // Ждём небольшую задержку для рендеринга
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
       })
 
-      // Скрываем элемент обратно
-      element.style.display = 'none'
-
-      const imgData = canvas.toDataURL('image/png')
+      // Восстанавливаем оригинальные стили
+      element.style.display = originalDisplay
+      element.style.position = originalPosition
+      element.style.left = originalLeft
+      element.style.top = originalTop
+      element.style.width = originalWidth
+      element.style.zIndex = originalZIndex
 
       const pdf = new jsPDF('p', 'mm', 'a4')
-      const imgWidth = 210
-      const pageHeight = 295
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const margin = 15 // Отступы по краям
+      const contentWidth = pdfWidth - 2 * margin
 
-      let position = 0
+      // Получаем размеры canvas
+      const imgWidth = canvas.width
+      const imgHeight = canvas.height
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
+      // Конвертируем пиксели в мм (96 DPI = 0.264583 мм на пиксель)
+      const pxToMm = 0.264583
+      const imgWidthMm = imgWidth * pxToMm
+      const imgHeightMm = imgHeight * pxToMm
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
+      // Рассчитываем масштаб для вписывания в ширину страницы
+      const scale = contentWidth / imgWidthMm
+      const scaledHeightMm = imgHeightMm * scale
+
+      // Высота одной страницы без отступов
+      const pageHeight = pdfHeight - 2 * margin
+
+      // Рассчитываем количество страниц
+      const totalPages = Math.ceil(scaledHeightMm / pageHeight)
+
+      // Разбиваем на страницы
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) {
+          pdf.addPage()
+        }
+
+        // Рассчитываем позицию и размер для этой страницы
+        const sourceY = (imgHeight / totalPages) * i
+        const sourceHeight = Math.min(
+          imgHeight / totalPages,
+          imgHeight - sourceY
+        )
+
+        // Высота в мм для этой части
+        const pageImgHeightMm = (sourceHeight * pxToMm) * scale
+
+        // Создаём временный canvas для этой страницы
+        const pageCanvas = document.createElement('canvas')
+        pageCanvas.width = imgWidth
+        pageCanvas.height = Math.ceil(sourceHeight)
+        const pageCtx = pageCanvas.getContext('2d')
+
+        // Заполняем белым фоном
+        pageCtx.fillStyle = '#ffffff'
+        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+
+        // Копируем часть исходного canvas
+        pageCtx.drawImage(
+          canvas,
+          0,
+          Math.floor(sourceY),
+          imgWidth,
+          Math.ceil(sourceHeight),
+          0,
+          0,
+          imgWidth,
+          Math.ceil(sourceHeight)
+        )
+
+        const pageImgData = pageCanvas.toDataURL('image/png', 1.0)
+
+        // Добавляем изображение на страницу
+        pdf.addImage(
+          pageImgData,
+          'PNG',
+          margin,
+          margin,
+          contentWidth,
+          pageImgHeightMm
+        )
       }
 
       pdf.save(`ecobalance-report-${new Date().toISOString().split('T')[0]}.pdf`)
@@ -172,88 +256,167 @@ export default function Report() {
           <p className="text-lg text-gray-700 max-w-3xl mx-auto">{getSummaryText()}</p>
         </div>
 
-        {/* Report Content for PDF */}
-        <div id="report-content" className="bg-white p-8 mb-8" style={{ display: 'none', position: 'absolute', left: '-9999px' }}>
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">EcoBalance</h1>
-              <p className="text-xl text-gray-600">Отчёт о расчёте углеродного следа</p>
+        {/* Report Content for PDF - Optimized for PDF generation */}
+        <div
+          id="report-content"
+          className="bg-white"
+          style={{
+            display: 'none',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '800px',
+            minHeight: '100vh',
+            padding: '40px',
+            fontSize: '14px',
+            lineHeight: '1.6',
+            fontFamily: 'Arial, sans-serif',
+            color: '#1f2937',
+            backgroundColor: '#ffffff',
+            zIndex: -9999,
+          }}
+        >
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '40px', pageBreakAfter: 'avoid' }}>
+            <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#1f2937', marginBottom: '10px' }}>
+              EcoBalance
+            </h1>
+            <p style={{ fontSize: '18px', color: '#4b5563' }}>Отчёт о расчёте углеродного следа</p>
+          </div>
+
+          {/* Company Info */}
+          <div style={{ borderTop: '2px solid #d1d5db', borderBottom: '2px solid #d1d5db', padding: '30px 0', marginBottom: '30px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '20px', color: '#111827' }}>
+              Информация о компании
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px', color: '#374151', lineHeight: '1.7' }}>
+              <p style={{ margin: 0 }}><strong>Компания:</strong> {user?.company?.name || 'Не указана'}</p>
+              <p style={{ margin: 0 }}><strong>Отрасль:</strong> {user?.company?.industry || 'Не указана'}</p>
+              <p style={{ margin: 0 }}><strong>Размер:</strong> {user?.company?.size || 'Не указан'}</p>
+              <p style={{ margin: 0 }}><strong>Регион:</strong> {user?.company?.region || 'Не указан'}</p>
+            </div>
+          </div>
+
+          {/* Product Info */}
+          <div style={{ borderBottom: '2px solid #d1d5db', padding: '30px 0', marginBottom: '30px', pageBreakInside: 'avoid' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '20px', color: '#111827' }}>
+              Информация о продукте
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px', color: '#374151', lineHeight: '1.7' }}>
+              <p style={{ margin: 0 }}><strong>Продукт:</strong> {results.data.product?.name || 'Не указан'}</p>
+              <p style={{ margin: 0 }}><strong>Сырьё:</strong> {results.data.rawMaterial?.name || 'Не указано'}</p>
+              <p style={{ margin: 0 }}><strong>Расход сырья:</strong> {results.data.rawMaterialAmount || 'Не указано'} т/т</p>
+              <p style={{ margin: 0 }}><strong>Электроэнергия:</strong> {results.data.electricity || 'Не указано'} МВт·ч/т</p>
+            </div>
+          </div>
+
+          {/* Results */}
+          <div style={{ borderBottom: '2px solid #d1d5db', padding: '30px 0', marginBottom: '30px', pageBreakInside: 'avoid' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '20px', color: '#111827' }}>
+              Результаты расчёта
+            </h2>
+
+            <div style={{ backgroundColor: '#f9fafb', padding: '24px', borderRadius: '8px', marginBottom: '20px' }}>
+              <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                Общий углеродный след (Scope 1-3)
+              </p>
+              <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>
+                {results.footprint}
+              </p>
+              <p style={{ fontSize: '16px', color: '#4b5563' }}>кг CO₂-экв./т продукта</p>
             </div>
 
-            <div className="border-t-2 border-b-2 border-gray-300 py-6 mb-8">
-              <h2 className="text-2xl font-bold mb-4">Информация о компании</h2>
-              <div className="space-y-2 text-gray-700">
-                <p><strong>Компания:</strong> {user?.company?.name || 'Не указана'}</p>
-                <p><strong>Отрасль:</strong> {user?.company?.industry || 'Не указана'}</p>
-                <p><strong>Размер:</strong> {user?.company?.size || 'Не указан'}</p>
-                <p><strong>Регион:</strong> {user?.company?.region || 'Не указан'}</p>
-              </div>
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#111827' }}>
+                Вклад компонентов:
+              </h3>
+              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {results.breakdown.map((item, index) => (
+                  <li key={item.name} style={{ fontSize: '14px', color: '#374151', paddingLeft: '20px', lineHeight: '1.7', margin: 0 }}>
+                    • {item.name}: {item.value} кг CO₂ ({item.percentage}%)
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <div className="border-b-2 border-gray-300 py-6 mb-8">
-              <h2 className="text-2xl font-bold mb-4">Информация о продукте</h2>
-              <div className="space-y-2 text-gray-700">
-                <p><strong>Продукт:</strong> {results.data.product?.name || 'Не указан'}</p>
-                <p><strong>Сырьё:</strong> {results.data.rawMaterial?.name || 'Не указано'}</p>
-                <p><strong>Расход сырья:</strong> {results.data.rawMaterialAmount || 'Не указано'} т/т</p>
-                <p><strong>Электроэнергия:</strong> {results.data.electricity || 'Не указано'} МВт·ч/т</p>
-              </div>
+            <div style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+              <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Сравнение с бенчмарком</p>
+              <p style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+                Ваш показатель: {results.footprint} кг CO₂/т
+              </p>
+              <p style={{ fontSize: '16px', color: '#374151', marginBottom: '4px' }}>
+                Средний по отрасли: {results.benchmark} кг CO₂/т
+              </p>
+              <p style={{ fontSize: '16px', fontWeight: 'bold', color: results.footprint > results.benchmark ? '#dc2626' : '#16a34a' }}>
+                {results.footprint > results.benchmark ? '+' : ''}
+                {results.benchmarkDiff.toFixed(1)}% от среднего
+              </p>
             </div>
+          </div>
 
-            <div className="border-b-2 border-gray-300 py-6 mb-8">
-              <h2 className="text-2xl font-bold mb-4">Результаты расчёта</h2>
-              <div className="bg-gray-50 p-6 rounded-lg mb-4">
-                <p className="text-sm text-gray-600 mb-2">Общий углеродный след (Scope 1-3)</p>
-                <p className="text-4xl font-bold text-gray-900">{results.footprint}</p>
-                <p className="text-lg text-gray-600">кг CO₂-экв./т продукта</p>
-              </div>
-
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">Вклад компонентов:</h3>
-                <ul className="space-y-1">
-                  {results.breakdown.map((item, index) => (
-                    <li key={item.name} className="text-gray-700">
-                      {item.name}: {item.value} кг CO₂ ({item.percentage}%)
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Сравнение с бенчмарком</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  Ваш показатель: {results.footprint} кг CO₂/т
-                </p>
-                <p className="text-lg text-gray-700">
-                  Средний по отрасли: {results.benchmark} кг CO₂/т
-                </p>
-                <p className={`text-lg font-bold ${results.footprint > results.benchmark ? 'text-red-600' : 'text-green-600'}`}>
-                  {results.footprint > results.benchmark ? '+' : ''}
-                  {results.benchmarkDiff.toFixed(1)}% от среднего
-                </p>
-              </div>
+          {/* Recommendations */}
+          {results.recommendations && results.recommendations.length > 0 && (
+            <div style={{ borderBottom: '2px solid #d1d5db', padding: '30px 0', marginBottom: '30px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '24px', color: '#111827' }}>
+                Рекомендации по снижению выбросов
+              </h2>
+              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                {results.recommendations.map((rec, index) => (
+                  <li
+                    key={rec.id || index}
+                    style={{
+                      borderLeft: '4px solid #22c55e',
+                      paddingLeft: '20px',
+                      paddingTop: '8px',
+                      paddingBottom: '8px',
+                      pageBreakInside: 'avoid',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <h3 style={{ fontSize: '17px', fontWeight: '600', marginBottom: '12px', color: '#111827', lineHeight: '1.4' }}>
+                      {rec.title || 'Рекомендация'}
+                    </h3>
+                    {rec.action && (
+                      <p style={{ fontSize: '14px', color: '#374151', marginBottom: '12px', lineHeight: '1.7', paddingRight: '10px' }}>
+                        <strong>Действие:</strong> {rec.action}
+                      </p>
+                    )}
+                    {rec.expectedReduction && (
+                      <p style={{ fontSize: '14px', color: '#16a34a', fontWeight: '600', marginBottom: '10px', lineHeight: '1.6' }}>
+                        <strong>Ожидаемое снижение:</strong> -{rec.expectedReduction.percentage?.toFixed(1) || 0}% ({' '}
+                        {rec.expectedReduction.absolute || 0} {rec.expectedReduction.unit || 'кг CO₂-экв./т'})
+                      </p>
+                    )}
+                    {rec.explanation && (
+                      <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '10px', lineHeight: '1.7', paddingRight: '10px' }}>
+                        <strong>Как это работает:</strong> {rec.explanation}
+                      </p>
+                    )}
+                    {rec.complexityLabel && (
+                      <p style={{ fontSize: '13px', color: '#4b5563', marginTop: '8px', lineHeight: '1.6' }}>
+                        <strong>Сложность:</strong> {rec.complexityLabel} | <strong>Окупаемость:</strong> {rec.payback || 'Не указана'}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
+          )}
 
-            {results.recommendations.length > 0 && (
-              <div className="border-b-2 border-gray-300 py-6 mb-8">
-                <h2 className="text-2xl font-bold mb-4">Рекомендации по снижению выбросов</h2>
-                <ul className="space-y-4">
-                  {results.recommendations.map((rec) => (
-                    <li key={rec.id} className="border-l-4 border-primary-600 pl-4">
-                      <h3 className="font-semibold text-gray-900 mb-1">{rec.title}</h3>
-                      <p className="text-gray-700 mb-1">{rec.description}</p>
-                      <p className="text-sm text-primary-600 font-medium">{rec.impact}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="text-center text-sm text-gray-500 pt-8 border-t-2 border-gray-300">
-              <p>Дата формирования: {new Date().toLocaleDateString('ru-RU')}</p>
-              <p>Версия методики: 1.0</p>
-              <p className="mt-2 font-medium">Сгенерировано системой EcoBalance</p>
-            </div>
+          {/* Footer */}
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: '12px',
+              color: '#6b7280',
+              paddingTop: '30px',
+              borderTop: '2px solid #d1d5db',
+              pageBreakInside: 'avoid',
+            }}
+          >
+            <p style={{ marginBottom: '4px' }}>Дата формирования: {new Date().toLocaleDateString('ru-RU')}</p>
+            <p style={{ marginBottom: '4px' }}>Версия методики: 1.0</p>
+            <p style={{ marginTop: '8px', fontWeight: '500' }}>Сгенерировано системой EcoBalance</p>
           </div>
         </div>
 
