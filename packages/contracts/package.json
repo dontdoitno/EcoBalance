@@ -1,0 +1,11 @@
+{
+  "name": "@ecobalance/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "OpenAPI schema and generated TypeScript client for the EcoBalance API. Wired up in Stage 2.",
+  "main": "index.ts",
+  "scripts": {
+    "generate": "echo 'generate: not implemented yet (Stage 2)' && exit 0"
+  }
+}

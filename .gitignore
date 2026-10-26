@@ -12,6 +12,25 @@ dist
 dist-ssr
 *.local
 
+# Python / API
+__pycache__
+*.pyc
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.coverage
+
+# Next.js
+.next
+*.tsbuildinfo
+
+# mkdocs
+site/
+
+# env
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

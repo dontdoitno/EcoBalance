@@ -1,0 +1,58 @@
+site_name: EcoBalance
+site_description: Платформа расчёта и снижения углеродного следа химической продукции
+docs_dir: docs
+theme:
+  name: material
+  language: ru
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+extra_javascript:
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+plugins:
+  - search
+  - mermaid2
+  - glightbox
+  - git-revision-date-localized:
+      enable_creation_date: true
+      enable_git_follow: false
+  - swagger-ui-tag
+
+nav:
+  - Главная: index.md
+  - Продукт:
+      - product/vision.md
+  - Методология:
+      - methodology/overview.md
+      - methodology/formulas.md
+      - methodology/scopes.md
+      - methodology/allocation.md
+      - methodology/cbam.md
+      - methodology/cbam-mapping.md
+      - methodology/data-form.md
+      - methodology/data-quality.md
+      - methodology/emission-factors.md
+      - methodology/hotspots.md
+      - methodology/optimization.md
+  - Архитектура:
+      - architecture/overview.md
+      - architecture/data-model.md
+      - architecture/core-engine.md
+      - architecture/auth-security.md
+      - architecture/adr/0001-stack.md
+  - API: api/index.md
+  - Фронтенд: frontend/index.md
+  - Дизайн: design/index.md
+  - Эксплуатация: operations/index.md
+  - Тестирование: testing/index.md
+  - Руководство пользователя: user-guide/index.md
+  - Открытые вопросы: open-questions.md
+  - Changelog: changelog.md

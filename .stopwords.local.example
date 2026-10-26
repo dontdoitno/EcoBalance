@@ -1,0 +1,8 @@
+# One stopword (literal string or extended regex) per line.
+# Copy this file to .stopwords.local and fill in names of outside
+# projects/teams/hackathons/clients that must never appear in this repo.
+# .stopwords.local is gitignored (see .gitignore: *.local) — never commit it.
+#
+# Example:
+# some-other-product
+# SomeHackathonName
