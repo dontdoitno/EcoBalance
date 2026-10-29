@@ -62,7 +62,7 @@ export default function ProfilePage() {
   return (
     <AppShell>
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-text">{dict.profile.title}</h1>
+        <h1 className="text-2xl font-medium text-text">{dict.profile.title}</h1>
         <p className="mt-1 text-text-secondary">{dict.profile.subtitle}</p>
       </div>
 
@@ -89,7 +89,7 @@ export default function ProfilePage() {
               value={form.industry}
               onChange={(e) => setForm({ ...form, industry: e.target.value })}
             >
-              <option value="">—</option>
+              <option value="">Не выбрано</option>
               {INDUSTRIES.map((industry) => (
                 <option key={industry} value={industry}>
                   {industry}
@@ -100,7 +100,7 @@ export default function ProfilePage() {
           <div>
             <Label htmlFor="size">{dict.profile.size}</Label>
             <Select id="size" value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })}>
-              <option value="">—</option>
+              <option value="">Не выбрано</option>
               {COMPANY_SIZES.map((size) => (
                 <option key={size.value} value={size.value}>
                   {size.label}
@@ -115,7 +115,7 @@ export default function ProfilePage() {
               value={form.region_id}
               onChange={(e) => setForm({ ...form, region_id: e.target.value })}
             >
-              <option value="">—</option>
+              <option value="">Не выбрано</option>
               {regions?.map((region) => (
                 <option key={region.id} value={region.id}>
                   {region.name}
@@ -125,7 +125,7 @@ export default function ProfilePage() {
           </div>
 
           {saved && (
-            <div className="rounded-md border border-status-low-fg/30 bg-status-low-bg px-4 py-3 text-sm text-status-low-fg">
+            <div className="rounded-pill border border-status-low-fg/30 bg-status-low-bg px-4 py-3 text-sm text-status-low-fg">
               {dict.profile.saved}
             </div>
           )}
@@ -138,7 +138,7 @@ export default function ProfilePage() {
 
       <div className="mt-10 max-w-2xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-text">{dict.profile.installations}</h2>
+          <h2 className="text-lg font-medium text-text">{dict.profile.installations}</h2>
           <Button variant="secondary" onClick={() => addInstallationMutation.mutate()}>
             {dict.profile.addInstallation}
           </Button>
@@ -148,7 +148,7 @@ export default function ProfilePage() {
             <Card key={installation.id} className="flex items-center justify-between py-3">
               <span className="font-medium text-text">{installation.name}</span>
               <span className="text-sm text-text-faint">
-                {regions?.find((r) => r.id === installation.region_id)?.name ?? "—"}
+                {regions?.find((r) => r.id === installation.region_id)?.name ?? "Не указан"}
               </span>
             </Card>
           ))}

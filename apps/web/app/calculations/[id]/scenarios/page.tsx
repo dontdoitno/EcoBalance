@@ -1,17 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { Skeleton } from "@/components/ui/skeleton";
 import { dict } from "@/lib/dictionaries/ru";
 import { api, extractErrorMessage } from "@/lib/api-client";
 import { formatKgCo2, formatPercent } from "@/lib/format";
 import type { MeasureCatalog, ScenarioResult } from "@/lib/types";
+
+interface DiffRow {
+  label: string;
+  before: number;
+  after: number;
+}
 
 export default function ScenariosPage() {
   const params = useParams<{ id: string }>();
@@ -24,10 +32,10 @@ export default function ScenariosPage() {
   });
 
   const scenarioMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (measureIds: string[]) => {
       const { data, error: apiError } = await api.POST("/calculations/{calculation_id}/scenarios", {
         params: { path: { calculation_id: params.id } },
-        body: { name: "Сценарий", measure_ids: selected, assumption_overrides: {} },
+        body: { name: "Сценарий", measure_ids: measureIds, assumption_overrides: {} },
       });
       if (apiError) throw apiError;
       return data as unknown as ScenarioResult;
@@ -35,6 +43,15 @@ export default function ScenariosPage() {
     onError: (err) => setError(extractErrorMessage(err, dict.auth.genericError)),
     onSuccess: () => setError(null),
   });
+
+  const mutateRef = useRef(scenarioMutation.mutate);
+  mutateRef.current = scenarioMutation.mutate;
+
+  useEffect(() => {
+    if (selected.length === 0) return;
+    const timeout = setTimeout(() => mutateRef.current(selected), 350);
+    return () => clearTimeout(timeout);
+  }, [selected]);
 
   function toggle(measureId: string) {
     setSelected((prev) =>
@@ -50,10 +67,30 @@ export default function ScenariosPage() {
       ]
     : [];
 
+  const diffRows: DiffRow[] = result
+    ? [
+        {
+          label: "Scope 1",
+          before: Number(result.baseline.scope1_kg_co2_per_unit),
+          after: Number(result.scenario.scope1_kg_co2_per_unit),
+        },
+        {
+          label: "Scope 2",
+          before: Number(result.baseline.scope2_kg_co2_per_unit),
+          after: Number(result.scenario.scope2_kg_co2_per_unit),
+        },
+        {
+          label: "Scope 3",
+          before: Number(result.baseline.scope3_kg_co2_per_unit),
+          after: Number(result.scenario.scope3_kg_co2_per_unit),
+        },
+      ]
+    : [];
+
   return (
     <AppShell>
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-text">{dict.scenarios.title}</h1>
+        <h1 className="text-2xl font-medium text-text">{dict.scenarios.title}</h1>
         <p className="mt-1 text-text-secondary">{dict.scenarios.subtitle}</p>
       </div>
 
@@ -63,7 +100,7 @@ export default function ScenariosPage() {
             Object.entries(catalog).map(([id, measure]) => (
               <Card
                 key={id}
-                className={`cursor-pointer transition-colors ${
+                className={`cursor-pointer transition-colors duration-150 ${
                   selected.includes(id) ? "border-accent bg-accent-soft" : ""
                 }`}
                 onClick={() => toggle(id)}
@@ -90,18 +127,30 @@ export default function ScenariosPage() {
                 </div>
               </Card>
             ))}
-          <Button
-            onClick={() => scenarioMutation.mutate()}
-            disabled={selected.length === 0 || scenarioMutation.isPending}
-          >
-            {dict.scenarios.runScenario}
-          </Button>
+          {selected.length > 0 && (
+            <p className="text-sm text-text-faint" aria-live="polite">
+              {scenarioMutation.isPending ? "Пересчитываем…" : "Эффект пересчитан автоматически"}
+            </p>
+          )}
           {error && <p className="text-sm text-status-critical-fg">{error}</p>}
         </div>
 
         <div>
-          {result ? (
+          {scenarioMutation.isPending && !result ? (
             <Card>
+              <Skeleton className="h-56" />
+              <div className="mt-4 space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </Card>
+          ) : result ? (
+            <Card
+              className={`motion-safe:animate-step-in transition-opacity duration-150 ${
+                scenarioMutation.isPending ? "opacity-60" : "opacity-100"
+              }`}
+            >
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
@@ -127,23 +176,68 @@ export default function ScenariosPage() {
                       labelStyle={{ color: "var(--color-text)" }}
                       itemStyle={{ color: "var(--color-text)" }}
                     />
-                    <Bar dataKey="value" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={420}>
+                      <Cell fill="var(--color-cool)" />
+                      <Cell fill="var(--color-accent)" />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+
+              <div className="mt-6 overflow-hidden rounded border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-bg-sunken text-xs text-text-faint">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Статья</th>
+                      <th className="px-3 py-2 text-right font-medium">{dict.scenarios.before}</th>
+                      <th className="px-3 py-2 text-right font-medium">{dict.scenarios.after}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {diffRows.map((row) => {
+                      const delta = row.before - row.after;
+                      return (
+                        <tr
+                          key={row.label}
+                          className={
+                            delta > 0 ? "bg-status-low-bg" : delta < 0 ? "bg-status-critical-bg" : undefined
+                          }
+                        >
+                          <td className="px-3 py-2 text-text">{row.label}</td>
+                          <td className="px-3 py-2 text-right text-text-faint line-through">
+                            <span className="font-mono tabular-nums">{formatKgCo2(row.before)}</span>
+                          </td>
+                          <td className="px-3 py-2 text-right text-text">
+                            <span className="font-mono tabular-nums">
+                              <NumberTicker value={row.after} />
+                            </span>{" "}
+                            кг CO₂-экв.
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-text-secondary">{dict.scenarios.reduction}</span>
-                  <span className="font-semibold text-status-low-fg">
-                    −{formatKgCo2(result.delta_pcf_full_kg_co2_per_unit)} (
-                    {formatPercent(result.delta_pcf_full_pct)})
+                  <span className="text-status-low-fg">
+                    −<span className="font-mono tabular-nums">
+                      <NumberTicker value={Number(result.delta_pcf_full_kg_co2_per_unit)} />
+                    </span>{" "}
+                    кг CO₂-экв. ({formatPercent(result.delta_pcf_full_pct)})
                   </span>
                 </div>
                 {result.delta_cbam_embedded_kg_co2_per_unit != null && (
                   <div className="flex justify-between">
                     <span className="text-text-secondary">{dict.results.cbamEmbedded}</span>
-                    <span className="font-semibold text-status-low-fg">
-                      −{formatKgCo2(result.delta_cbam_embedded_kg_co2_per_unit)}
+                    <span className="text-status-low-fg">
+                      −<span className="font-mono tabular-nums">
+                        <NumberTicker value={Number(result.delta_cbam_embedded_kg_co2_per_unit)} />
+                      </span>{" "}
+                      кг CO₂-экв.
                     </span>
                   </div>
                 )}

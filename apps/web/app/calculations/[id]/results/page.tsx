@@ -7,7 +7,9 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { RatingBadge } from "@/components/ui/rating-badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { dict } from "@/lib/dictionaries/ru";
 import { api } from "@/lib/api-client";
 import { formatKgCo2, formatPercent } from "@/lib/format";
@@ -23,7 +25,12 @@ export default function ResultsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
-  const { data: detail, isLoading } = useQuery<CalculationDetail>({
+  const {
+    data: detail,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<CalculationDetail>({
     queryKey: ["calculation", params.id],
     queryFn: async () =>
       (
@@ -36,7 +43,28 @@ export default function ResultsPage() {
   if (isLoading) {
     return (
       <AppShell>
-        <p className="text-text-secondary">{dict.common.loading}</p>
+        <div className="mb-8">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="mt-2 h-4 w-96" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (isError) {
+    return (
+      <AppShell>
+        <Card className="max-w-lg py-10 text-center">
+          <p className="font-medium text-text">Не удалось загрузить результаты</p>
+          <p className="mt-1 text-sm text-text-secondary">Проверьте соединение и попробуйте ещё раз.</p>
+          <Button variant="secondary" className="mt-6" onClick={() => refetch()}>
+            Повторить
+          </Button>
+        </Card>
       </AppShell>
     );
   }
@@ -65,7 +93,7 @@ export default function ResultsPage() {
     <AppShell>
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text">{dict.results.title}</h1>
+          <h1 className="text-2xl font-medium text-text">{dict.results.title}</h1>
           <p className="mt-1 text-text-secondary">{dict.results.subtitle}</p>
         </div>
         <div className="flex gap-3">
@@ -79,7 +107,7 @@ export default function ResultsPage() {
       </div>
 
       {result.data_quality_flags.some((f) => f.code === "demo_factors") && (
-        <div className="mb-6 rounded-md border border-status-significant-fg/30 bg-status-significant-bg px-4 py-3 text-sm text-status-significant-fg">
+        <div className="mb-6 rounded-pill border border-status-significant-fg/30 bg-status-significant-bg px-4 py-3 text-sm text-status-significant-fg">
           {dict.common.demoDataBanner}
         </div>
       )}
@@ -87,8 +115,8 @@ export default function ResultsPage() {
       <div className="mb-8 grid gap-6 md:grid-cols-2">
         <Card>
           <p className="text-sm text-text-secondary">{dict.results.pcfFull}</p>
-          <p className="mt-2 text-4xl font-semibold tabular-nums text-text">
-            {formatKgCo2(result.pcf_full_kg_co2_per_unit)}
+          <p className="mt-2 font-mono text-4xl tabular-nums text-text">
+            <NumberTicker value={Number(result.pcf_full_kg_co2_per_unit)} /> кг CO₂-экв.
           </p>
           <p className="mt-1 text-sm text-text-faint">на {result.functional_unit} продукта</p>
         </Card>
@@ -96,8 +124,8 @@ export default function ResultsPage() {
           <p className="text-sm text-text-secondary">{dict.results.cbamEmbedded}</p>
           {result.cbam_applicable && result.cbam_embedded_kg_co2_per_unit ? (
             <>
-              <p className="mt-2 text-4xl font-semibold tabular-nums text-text">
-                {formatKgCo2(result.cbam_embedded_kg_co2_per_unit)}
+              <p className="mt-2 font-mono text-4xl tabular-nums text-cool">
+                <NumberTicker value={Number(result.cbam_embedded_kg_co2_per_unit)} /> кг CO₂-экв.
               </p>
               <p className="mt-1 text-sm text-text-faint">прямые + энергия + сырьё-прекурсоры</p>
             </>
@@ -108,7 +136,7 @@ export default function ResultsPage() {
       </div>
 
       <Card className="mb-8">
-        <h2 className="text-lg font-semibold text-text">{dict.results.scopeBreakdown}</h2>
+        <h2 className="text-lg font-medium text-text">{dict.results.scopeBreakdown}</h2>
         <div className="mt-4 h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" margin={{ left: 24 }}>
@@ -148,10 +176,10 @@ export default function ResultsPage() {
       </Card>
 
       <Card>
-        <h2 className="text-lg font-semibold text-text">{dict.results.hotspotsTitle}</h2>
+        <h2 className="text-lg font-medium text-text">{dict.results.hotspotsTitle}</h2>
         <p className="mt-1 text-sm text-text-secondary">{dict.results.hotspotsSubtitle}</p>
         <table className="mt-5 w-full text-sm">
-          <thead className="text-xs uppercase tracking-wide text-text-faint">
+          <thead className="text-xs text-text-faint">
             <tr>
               <th className="pb-2 text-left font-medium">Источник</th>
               <th className="pb-2 text-left font-medium">Scope</th>

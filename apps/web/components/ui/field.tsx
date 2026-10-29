@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 
 const fieldBaseClass =
-  "w-full rounded-md border border-border-strong bg-bg-raised px-3 py-2 text-sm text-text outline-none transition-colors duration-150 placeholder:text-text-faint focus:border-accent disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full min-h-[44px] rounded-pill border border-border bg-bg-sunken px-3 py-2 text-sm text-text outline-none transition-colors duration-150 placeholder:text-text-faint focus:border-accent disabled:cursor-not-allowed disabled:opacity-60";
 
 export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
   return (

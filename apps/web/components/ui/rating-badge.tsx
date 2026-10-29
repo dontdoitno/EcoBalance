@@ -14,7 +14,7 @@ export function RatingBadge({ rating }: { rating: Rating }) {
   return (
     <span
       className={clsx(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded border border-border px-2.5 py-1 text-xs font-medium",
         rating === "critical" && "bg-status-critical-bg text-status-critical-fg",
         rating === "significant" && "bg-status-significant-bg text-status-significant-fg",
         rating === "low" && "bg-status-low-bg text-status-low-fg",

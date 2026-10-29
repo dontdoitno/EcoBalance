@@ -18,7 +18,7 @@ export function MiniCalculator() {
   const overpayment = defaultCost - actualCost;
 
   return (
-    <div className="grid gap-8 rounded-xl border border-border bg-bg-raised p-8 shadow-md lg:grid-cols-[1fr_1fr]">
+    <div className="grid gap-8 rounded-card border border-border bg-bg-raised p-8 lg:grid-cols-[1fr_1fr] lg:divide-x lg:divide-border">
       <div className="space-y-5">
         <Slider
           label="Встроенные выбросы (факт), т CO₂-экв./т продукции"
@@ -46,10 +46,10 @@ export function MiniCalculator() {
         />
         <p className="text-xs text-text-faint">
           Параметры настраиваются; точная наценка default-значений и рыночная цена ETS изменяются во
-          времени — это иллюстрация механизма, не прогноз.
+          времени, это иллюстрация механизма, не прогноз.
         </p>
       </div>
-      <div className="flex flex-col justify-center gap-4 rounded-lg bg-bg-sunken p-6">
+      <div className="flex flex-col justify-center gap-4 lg:pl-8">
         <Row label="По факту (первичные данные)" value={`${formatNumber(actualCost)} €/т`} />
         <Row label="По default-значению" value={`${formatNumber(defaultCost)} €/т`} />
         <div className="h-px bg-border" />
@@ -101,7 +101,13 @@ function Row({ label, value, emphasis }: { label: string; value: string; emphasi
   return (
     <div className="flex items-baseline justify-between">
       <span className="text-sm text-text-secondary">{label}</span>
-      <span className={emphasis ? "text-2xl font-semibold text-accent" : "text-lg font-medium text-text"}>
+      <span
+        className={
+          emphasis
+            ? "font-mono text-2xl tabular-nums text-accent"
+            : "font-mono text-lg tabular-nums text-text"
+        }
+      >
         {value}
       </span>
     </div>

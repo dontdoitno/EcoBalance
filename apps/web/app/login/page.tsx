@@ -45,16 +45,16 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <Link href="/" className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent">
-            <span className="text-xl font-bold text-accent-on">E</span>
+          <Link href="/" className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-card bg-accent">
+            <span className="text-xl font-medium text-accent-on">E</span>
           </Link>
-          <h1 className="text-2xl font-semibold text-text">{dict.auth.loginTitle}</h1>
+          <h1 className="text-2xl font-medium text-text">{dict.auth.loginTitle}</h1>
           <p className="mt-1 text-sm text-text-secondary">{dict.auth.loginSubtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {serverError && (
-            <div className="rounded-md border border-status-critical-fg/30 bg-status-critical-bg px-4 py-3 text-sm text-status-critical-fg">
+            <div className="rounded-pill border border-status-critical-fg/30 bg-status-critical-bg px-4 py-3 text-sm text-status-critical-fg">
               {serverError}
             </div>
           )}

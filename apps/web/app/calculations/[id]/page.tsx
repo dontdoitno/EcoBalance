@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
+import { ScopeDiagram } from "@/components/scope-diagram";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldHint, Input, Label, Select } from "@/components/ui/field";
+import { Skeleton } from "@/components/ui/skeleton";
 import { dict } from "@/lib/dictionaries/ru";
 import { api, extractErrorMessage } from "@/lib/api-client";
 import {
@@ -67,7 +69,7 @@ export default function CalculationWizardPage() {
   const { data: regions } = useRegions();
   const { data: transportModes } = useTransportModes();
 
-  const { data: detail } = useQuery<CalculationDetail>({
+  const { data: detail, isLoading: isDetailLoading } = useQuery<CalculationDetail>({
     queryKey: ["calculation", params.id],
     queryFn: async () => (await api.GET("/calculations/{calculation_id}", {
       params: { path: { calculation_id: params.id } },
@@ -161,8 +163,9 @@ export default function CalculationWizardPage() {
 
   return (
     <AppShell>
+      <div className="mx-auto max-w-3xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-text">{dict.wizard.title}</h1>
+        <h1 className="text-2xl font-medium text-text">{dict.wizard.title}</h1>
         <p className="mt-1 text-text-secondary">{dict.wizard.subtitle}</p>
       </div>
 
@@ -170,7 +173,7 @@ export default function CalculationWizardPage() {
         {STEPS.map((label, index) => (
           <li key={label} className="flex flex-1 items-center gap-2">
             <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
                 index <= step ? "bg-accent text-accent-on" : "bg-bg-sunken text-text-faint"
               }`}
             >
@@ -184,9 +187,25 @@ export default function CalculationWizardPage() {
         ))}
       </ol>
 
-      <Card className="min-h-[360px] max-w-2xl">
+      <Card className="min-h-[360px]">
+        {isDetailLoading ? (
+          <div className="space-y-5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-11 w-full" />
+          </div>
+        ) : (
+        <div key={step} className="animate-step-in">
         {step === 0 && (
           <div className="space-y-5">
+            <div className="border-b border-border pb-5">
+              <ScopeDiagram />
+              <p className="mt-3 text-xs text-text-faint">
+                Сырьё и транспорт считаются за пределами площадки (Scope 3), энергия относится к Scope 2,
+                а сжигание топлива и технологические выбросы на площадке к Scope 1.
+              </p>
+            </div>
             <div>
               <Label htmlFor="product">{dict.wizard.selectProduct}</Label>
               <Select
@@ -194,7 +213,7 @@ export default function CalculationWizardPage() {
                 value={form.product_id}
                 onChange={(e) => setForm({ ...form, product_id: e.target.value, route_id: "" })}
               >
-                <option value="">—</option>
+                <option value="">Не выбрано</option>
                 {products?.map((product) => (
                   <option key={product.id} value={product.id}>
                     {product.name}
@@ -204,8 +223,8 @@ export default function CalculationWizardPage() {
               {form.product_id && (
                 <FieldHint>
                   {products?.find((p) => p.id === form.product_id)?.cbam_applicable
-                    ? "Продукт входит в категории CBAM — после расчёта доступен отчёт CBAM."
-                    : "CBAM не применим к этому продукту — доступен PCF-отчёт."}
+                    ? "Продукт входит в категории CBAM: после расчёта доступен отчёт CBAM."
+                    : "CBAM не применим к этому продукту, доступен PCF-отчёт."}
                 </FieldHint>
               )}
             </div>
@@ -217,7 +236,7 @@ export default function CalculationWizardPage() {
                   value={form.route_id}
                   onChange={(e) => setForm({ ...form, route_id: e.target.value })}
                 >
-                  <option value="">—</option>
+                  <option value="">Не выбрано</option>
                   {availableRoutes.map((route) => (
                     <option key={route.id} value={route.id}>
                       {route.name}
@@ -231,6 +250,12 @@ export default function CalculationWizardPage() {
 
         {step === 1 && (
           <div className="space-y-6">
+            <div className="border-b border-border pb-5">
+              <ScopeDiagram highlight={["upstream", "scope2"]} />
+              <p className="mt-3 text-xs text-text-faint">
+                Сырьё относится к Scope 3 (за пределами площадки), электроэнергия к Scope 2.
+              </p>
+            </div>
             <div>
               <Label htmlFor="material">{dict.wizard.rawMaterial}</Label>
               <div className="flex gap-3">
@@ -249,7 +274,7 @@ export default function CalculationWizardPage() {
                     })
                   }
                 >
-                  <option value="">—</option>
+                  <option value="">Не выбрано</option>
                   {rawMaterials?.map((material) => (
                     <option key={material.id} value={material.id}>
                       {material.name}
@@ -294,7 +319,7 @@ export default function CalculationWizardPage() {
                 value={form.region_id}
                 onChange={(e) => setForm({ ...form, region_id: e.target.value })}
               >
-                <option value="">—</option>
+                <option value="">Не выбрано</option>
                 {regions?.map((region) => (
                   <option key={region.id} value={region.id}>
                     {region.name}
@@ -307,6 +332,13 @@ export default function CalculationWizardPage() {
 
         {step === 2 && (
           <div className="space-y-5">
+            <div className="border-b border-border pb-5">
+              <ScopeDiagram highlight={["downstream"]} />
+              <p className="mt-3 text-xs text-text-faint">
+                Транспорт готовой продукции и обращение с отходами тоже Scope 3, но не входят во
+                встроенные выбросы CBAM.
+              </p>
+            </div>
             <p className="text-sm text-text-secondary">{dict.common.optional}</p>
             {form.transport.map((leg, index) => (
               <div key={index} className="flex items-end gap-3">
@@ -377,26 +409,28 @@ export default function CalculationWizardPage() {
           <div className="space-y-4 text-sm">
             <ReviewRow
               label={dict.wizard.stepProduct}
-              value={products?.find((p) => p.id === form.product_id)?.name ?? "—"}
+              value={products?.find((p) => p.id === form.product_id)?.name ?? "Не указано"}
             />
             <ReviewRow
               label={dict.wizard.rawMaterial}
               value={
-                rawMaterials?.find((m) => m.id === form.raw_materials[0]?.material_id)?.name ?? "—"
+                rawMaterials?.find((m) => m.id === form.raw_materials[0]?.material_id)?.name ?? "Не указано"
               }
             />
-            <ReviewRow label={dict.wizard.electricity} value={form.electricity_mwh || "—"} />
+            <ReviewRow label={dict.wizard.electricity} value={form.electricity_mwh || "Не указано"} />
             <ReviewRow
               label={dict.wizard.electricityRegion}
-              value={regions?.find((r) => r.id === form.region_id)?.name ?? "—"}
+              value={regions?.find((r) => r.id === form.region_id)?.name ?? "Не указано"}
             />
             <ReviewRow label={dict.wizard.stepTransport} value={`${form.transport.length} шт.`} />
             {error && <p className="text-status-critical-fg">{error}</p>}
           </div>
         )}
+        </div>
+        )}
       </Card>
 
-      <div className="mt-6 flex max-w-2xl justify-between">
+      <div className="mt-6 flex justify-between">
         <Button variant="secondary" onClick={back} disabled={step === 0}>
           {dict.wizard.back}
         </Button>
@@ -409,6 +443,7 @@ export default function CalculationWizardPage() {
             {dict.wizard.calculate}
           </Button>
         )}
+      </div>
       </div>
     </AppShell>
   );

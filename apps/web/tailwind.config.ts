@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: ["selector", '[data-theme="dark"]'],
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
@@ -28,14 +27,21 @@ const config: Config = {
           "critical-bg": "var(--color-status-critical-bg)",
           "critical-fg": "var(--color-status-critical-fg)",
         },
+        cool: {
+          DEFAULT: "var(--color-cool)",
+          soft: "var(--color-cool-soft)",
+        },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "Arial", "sans-serif"],
+        sans: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-outlier)", "ui-monospace", "monospace"],
       },
       borderRadius: {
         sm: "var(--radius-sm)",
         md: "var(--radius-md)",
         lg: "var(--radius-lg)",
+        pill: "var(--radius-pill)",
+        card: "var(--radius-card)",
       },
       boxShadow: {
         sm: "var(--shadow-sm)",

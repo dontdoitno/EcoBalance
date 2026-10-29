@@ -1,175 +1,89 @@
+/* Hallmark · shape: kept (app shell + marketing page) · genre: modern-minimal · theme: Console (by request) · redesign: full
+ * hero: Stage · nav: top bar, wordmark + one action · footer: mast · imagery: none · signature: the PCF reading (struck value, who/when) · console: graphite
+ * axes: dark/grotesk-sans/chromatic-amber · posture: restrained · contrast: pass · fold: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P_ H_ E_ S_ R_ V_ · weakest: imagery, the app has no photographs to show so the Range leans on readings/trails/diffs instead */
+@import "../tokens.css";
+@import "../base.css" layer(base);
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Design tokens. Light palette on bare :root; dark palette re-defined under
-   the system-preference media query and the explicit [data-theme="dark"]
-   override, so an explicit toggle always wins. See docs/design/index.md. */
+/* Bridge: the app's existing Tailwind color/radius utilities (bg-bg, text-text,
+   rounded-md, etc.) point at Console's tokens, so every component built before
+   this redesign repaints without a class-level rewrite. One theme, one dial
+   (graphite) — no light variant; Console is a committed dark instrument. */
 :root {
-  --color-bg: #f7f8fa;
-  --color-bg-raised: #ffffff;
-  --color-bg-sunken: #eef0f3;
-  --color-border: #dde1e6;
-  --color-border-strong: #c3c9d1;
+  --color-bg: var(--color-paper);
+  --color-bg-raised: var(--color-paper-2);
+  --color-bg-sunken: var(--color-paper-3);
+  --color-border: var(--color-rule);
+  --color-border-strong: var(--color-rule-2);
 
-  --color-text: #171b21;
-  --color-text-secondary: #4d5664;
-  --color-text-faint: #7b8494;
+  --color-text: var(--color-ink);
+  --color-text-secondary: var(--color-ink-2);
+  --color-text-faint: var(--color-muted);
 
-  --color-accent: #0f6e6a;
-  --color-accent-strong: #0b5753;
-  --color-accent-soft: #e2f3f1;
-  --color-accent-text-on: #ffffff;
+  --color-accent-strong: oklch(88% 0.15 80);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-accent-text-on: var(--color-accent-ink);
 
-  --color-focus-ring: #0f6e6a;
+  --color-focus-ring: var(--color-focus);
 
-  --color-status-low-bg: #e4f3ea;
-  --color-status-low-fg: #1a7a44;
-  --color-status-significant-bg: #fdf0db;
-  --color-status-significant-fg: #92590a;
-  --color-status-critical-bg: #fbe4e3;
-  --color-status-critical-fg: #a3241c;
+  /* Hotspot severity: ok/bad are Console's real signals; the middle tier
+     (`significant`) stays neutral ink rather than inventing a third colour
+     — severity there reads from the icon + label, not a hue. */
+  --color-status-low-bg: var(--color-ok-soft);
+  --color-status-low-fg: var(--color-ok);
+  --color-status-significant-bg: var(--color-paper-3);
+  --color-status-significant-fg: var(--color-ink-2);
+  --color-status-critical-bg: var(--color-bad-soft);
+  --color-status-critical-fg: var(--color-bad);
 
-  --color-scrollbar-thumb: #c3c9d1;
+  --color-scrollbar-thumb: var(--color-rule-2);
   --color-scrollbar-track: transparent;
-  --color-selection-bg: #0f6e6a;
-  --color-selection-fg: #ffffff;
+  --color-selection-bg: var(--color-accent);
+  --color-selection-fg: var(--color-accent-ink);
 
-  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06);
-  --shadow-md: 0 4px 10px -2px rgb(15 23 42 / 0.1), 0 2px 4px -2px rgb(15 23 42 / 0.06);
-  --shadow-lg: 0 16px 32px -8px rgb(15 23 42 / 0.16), 0 4px 8px -4px rgb(15 23 42 / 0.08);
+  --radius-sm: var(--radius-pill);
+  --radius-md: var(--radius-card);
+  --radius-lg: var(--radius-card);
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
 
-  --ease-out-exp: cubic-bezier(0.16, 1, 0.3, 1);
-
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-bg: #11151b;
-    --color-bg-raised: #171c24;
-    --color-bg-sunken: #0b0e13;
-    --color-border: #2a313c;
-    --color-border-strong: #3a4250;
-
-    --color-text: #eef1f5;
-    --color-text-secondary: #a7b0bf;
-    --color-text-faint: #717c8c;
-
-    --color-accent: #35b8ab;
-    --color-accent-strong: #5cccc0;
-    --color-accent-soft: #163330;
-    --color-accent-text-on: #06201d;
-
-    --color-focus-ring: #35b8ab;
-
-    --color-status-low-bg: #13301f;
-    --color-status-low-fg: #5fd392;
-    --color-status-significant-bg: #332707;
-    --color-status-significant-fg: #e8ab4e;
-    --color-status-critical-bg: #351616;
-    --color-status-critical-fg: #f28d84;
-
-    --color-scrollbar-thumb: #3a4250;
-    --color-selection-bg: #35b8ab;
-    --color-selection-fg: #06201d;
-
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme="dark"] {
-  --color-bg: #11151b;
-  --color-bg-raised: #171c24;
-  --color-bg-sunken: #0b0e13;
-  --color-border: #2a313c;
-  --color-border-strong: #3a4250;
-
-  --color-text: #eef1f5;
-  --color-text-secondary: #a7b0bf;
-  --color-text-faint: #717c8c;
-
-  --color-accent: #35b8ab;
-  --color-accent-strong: #5cccc0;
-  --color-accent-soft: #163330;
-  --color-accent-text-on: #06201d;
-
-  --color-focus-ring: #35b8ab;
-
-  --color-status-low-bg: #13301f;
-  --color-status-low-fg: #5fd392;
-  --color-status-significant-bg: #332707;
-  --color-status-significant-fg: #e8ab4e;
-  --color-status-critical-bg: #351616;
-  --color-status-critical-fg: #f28d84;
-
-  --color-scrollbar-thumb: #3a4250;
-  --color-selection-bg: #35b8ab;
-  --color-selection-fg: #06201d;
-
-  color-scheme: dark;
+  --ease-out-exp: var(--ease-out);
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-
-  html {
-    scroll-behavior: smooth;
-  }
-
-  body {
-    background: var(--color-bg);
-    color: var(--color-text);
-    font-feature-settings: "cv11", "ss01";
-    text-rendering: optimizeLegibility;
-  }
-
-  ::selection {
-    background: var(--color-selection-bg);
-    color: var(--color-selection-fg);
-  }
-
   ::-webkit-scrollbar {
     width: 11px;
     height: 11px;
   }
-
   ::-webkit-scrollbar-track {
     background: var(--color-scrollbar-track);
   }
-
   ::-webkit-scrollbar-thumb {
     background-color: var(--color-scrollbar-thumb);
     border-radius: 999px;
     border: 3px solid transparent;
     background-clip: content-box;
   }
+}
 
-  * {
-    scrollbar-color: var(--color-scrollbar-thumb) transparent;
-    scrollbar-width: thin;
+/* A wizard step changing is a state change, not a reveal — transform/opacity
+   only, and base.css's reduced-motion rule already neutralizes it globally. */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
-
-  :focus-visible {
-    outline: 2px solid var(--color-focus-ring);
-    outline-offset: 2px;
-    border-radius: 4px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
+}
+.animate-step-in {
+  animation: step-in var(--dur-short) var(--ease-out);
 }
