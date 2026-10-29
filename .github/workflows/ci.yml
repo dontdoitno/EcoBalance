@@ -18,8 +18,30 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ecobalance
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: ecobalance_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ecobalance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://ecobalance:ci-password@localhost:5432/ecobalance_test
     steps:
       - uses: actions/checkout@v4
+      - name: Install WeasyPrint system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
+            libffi-dev shared-mime-info fonts-dejavu-core
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -28,9 +50,11 @@ jobs:
         run: uv sync --all-groups
       - name: Lint (ruff)
         run: uv run ruff check .
-      - name: Types (mypy --strict)
-        run: uv run mypy --strict ecobalance_core
-      - name: Tests (pytest)
+      - name: Types (mypy --strict on ecobalance_core, plain on app)
+        run: |
+          uv run mypy --strict ecobalance_core
+          uv run mypy app
+      - name: Tests (pytest — ecobalance_core + API integration)
         run: uv run pytest --cov=ecobalance_core
 
   web:

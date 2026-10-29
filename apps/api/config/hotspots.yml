@@ -1,0 +1,15 @@
+# Hotspot thresholds and data-quality flag limits.
+# Edited here, not hardcoded in ecobalance_core — see docs/methodology/hotspots.md.
+
+thresholds:
+  critical_pct: 30
+  significant_pct: 15
+
+quality_flags:
+  primary_data_share_min_pct: 50
+  uncertainty_max_pct: 20
+  factor_max_age_years: 5
+
+# "В химической отрасли в среднем около 64% выбросов приходится на Scope 3"
+# (PROMPT_CLAUDE_CODE.md §7.4) — illustrative figure, not independently verified.
+scope3_chemical_hint_pct: 64

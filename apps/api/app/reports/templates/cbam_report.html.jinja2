@@ -1,0 +1,63 @@
+{% extends "base.html.jinja2" %}
+{% block content %}
+<h1>EcoBalance</h1>
+<p class="subtitle">Отчёт CBAM — встроенные выбросы (embedded emissions)</p>
+
+{% if has_demo_factors %}
+<div class="banner">⚠ Расчёт использует демонстрационные коэффициенты выбросов (не верифицированные данные). Структура отчёта ориентирована на Implementing Regulation (EU) 2025/2547 и требует верификации по первоисточнику перед использованием в реальной декларации.</div>
+{% endif %}
+
+<h2>Данные установки и товара</h2>
+<div class="kv">
+  <p><strong>Оператор установки:</strong> {{ company_name }}</p>
+  <p><strong>Товар:</strong> {{ product_name }}</p>
+  <p><strong>CN-код:</strong> {{ cn_code }}</p>
+  <p><strong>Маршрут производства:</strong> {{ route_name }}</p>
+  <p><strong>Отчётный период:</strong> {{ period }}</p>
+</div>
+
+<h2>Встроенные удельные выбросы</h2>
+<div class="metric">
+  <div class="value">{{ cbam_embedded }}</div>
+  <div class="unit">т CO₂-экв. на {{ functional_unit }} товара</div>
+</div>
+<p>Включает: прямые выбросы (Scope 1) + косвенные от потреблённой электроэнергии (Scope 2) +
+выбросы производства сырья-прекурсоров (Scope 3, upstream). Не включает транспорт готовой
+продукции и отходы — они учитываются отдельно в PCF-отчёте для внутренних целей.</p>
+
+<table>
+  <thead><tr><th>Компонент</th><th>Значение, кг CO₂-экв.</th></tr></thead>
+  <tbody>
+    <tr><td>Прямые выбросы (Scope 1)</td><td>{{ scope1 }}</td></tr>
+    <tr><td>Косвенные выбросы от электроэнергии (Scope 2)</td><td>{{ scope2 }}</td></tr>
+    <tr><td>Выбросы сырья-прекурсоров (Scope 3, upstream)</td><td>{{ upstream }}</td></tr>
+  </tbody>
+</table>
+
+<h2>Оценка стоимости</h2>
+<table>
+  <thead><tr><th>Сценарий</th><th>Выбросы, тCO₂-экв./ед.</th><th>Цена квоты EU ETS, €/т</th><th>Оценка стоимости, €/ед.</th></tr></thead>
+  <tbody>
+    <tr><td>Фактические данные</td><td>{{ cbam_embedded_t }}</td><td>{{ ets_price }}</td><td>{{ cost_actual }}</td></tr>
+    <tr><td>Default-значение (без первичных данных)</td><td>{{ default_embedded_t }}</td><td>{{ ets_price }}</td><td>{{ cost_default }}</td></tr>
+  </tbody>
+</table>
+<p>Цена EU ETS и default-наценка — настраиваемые параметры, указаны для иллюстрации, не являются рыночной рекомендацией.</p>
+
+<h2>Качество данных и верификация</h2>
+<div class="kv">
+  {% if data_quality_score is not none %}
+  <p><strong>Оценка качества данных:</strong> {{ data_quality_score }}/100</p>
+  {% endif %}
+  <ul>
+    {% for flag in data_quality_flags %}
+    <li>{{ flag.message }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<h2>Методология</h2>
+<p>Структура отчёта и разведение embedded emissions / полного PCF — см. docs/methodology/cbam.md и
+docs/methodology/cbam-mapping.md. CN-код и применимость категории CBAM требуют верификации по
+актуальному регламенту перед подачей в реальную декларацию.</p>
+{% endblock %}

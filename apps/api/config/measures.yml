@@ -1,0 +1,73 @@
+# Optimization measure catalog (PROMPT_CLAUDE_CODE.md §7).
+#
+# Qualitative metadata only (title, scope, complexity, payback, standards,
+# side effects, default editable assumptions). The applicability predicate
+# and the actual input mutation live in ecobalance_core/measures.py, keyed
+# by the same id — a scenario's effect is always a real recalculation of
+# the model with the mutated input, never a magic percentage.
+
+measures:
+  renewable_electricity:
+    title: "Переход на электроэнергию с низким углеродным фактором (ВИЭ/PPA/I-REC)"
+    scope: "Scope 2"
+    complexity: low
+    complexity_label: "Низкая"
+    payback: "1-3 года"
+    standards: ["ISO 14064", "ISO 14067"]
+    side_effects:
+      esg: ["Улучшает ESG-рейтинг", "Позволяет включить в отчёты CDP и GRI"]
+      economic: ["Потенциальная экономия при долгосрочных контрактах"]
+    default_assumptions:
+      target_ef_kg_co2_per_mwh: 50
+
+  energy_efficiency:
+    title: "Оптимизация энергопотребления оборудования"
+    scope: "Scope 1-2"
+    complexity: medium
+    complexity_label: "Средняя"
+    payback: "1-3 года"
+    standards: ["ISO 50001"]
+    side_effects:
+      esg: ["Улучшение ESG-рейтинга"]
+      other: ["Повышение надёжности оборудования"]
+    default_assumptions:
+      reduction_ratio: 0.08
+
+  raw_material_switch:
+    title: "Замена части сырья на сырьё с меньшим углеродным фактором"
+    scope: "Scope 3"
+    complexity: medium
+    complexity_label: "Средняя"
+    payback: "2-5 лет"
+    standards: ["ISO 14064"]
+    side_effects:
+      esg: ["Возможность заявить частично биобазированный продукт", "Лучше встраивается в требования EU CBAM"]
+      other: ["Зависит от доступности поставщиков"]
+    default_assumptions:
+      switch_ratio: 0.3
+      target_material_id: "biomass_feedstock"
+
+  logistics_optimization:
+    title: "Оптимизация логистики"
+    scope: "Scope 3"
+    complexity: low
+    complexity_label: "Низкая"
+    payback: "Немедленно"
+    standards: ["ISO 14083"]
+    side_effects:
+      economic: ["Снижение транспортных расходов"]
+    default_assumptions:
+      target_mode_id: "rail"
+
+  carbon_capture:
+    title: "Улавливание CO₂ и CH₄ при производстве/использовании сырья"
+    scope: "Scope 1"
+    complexity: high
+    complexity_label: "Высокая"
+    payback: "5-10 лет"
+    standards: ["ISO 14064", "CDM"]
+    side_effects:
+      esg: ["Возможность получить субсидии за карбон-негативные проекты"]
+      economic: ["Требует инвестиций в оборудование"]
+    default_assumptions:
+      capture_ratio: 0.5

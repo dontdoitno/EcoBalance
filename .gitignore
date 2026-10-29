@@ -41,3 +41,6 @@ site/
 *.njsproj
 *.sln
 *.sw?
+
+# CLAUDE
+PROMPT_CLAUDE_CODE.md

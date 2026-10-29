@@ -1,5 +1,56 @@
 # Аутентификация и безопасность
 
-Статус: план — Этап 2. Email+пароль (argon2), сессия через JWT в
-httpOnly/Secure/SameSite=Lax cookie, refresh-ротация, rate limiting на
-`/auth/*`. Роли: `company_user`, `admin`.
+Реализация: `app/security.py`, `app/deps.py`, `app/routers/auth.py`.
+
+## Схема
+
+- Пароли — `argon2` (`argon2-cffi`), не обратимо хранятся как хэш
+  (`User.hashed_password`).
+- Сессия — JWT **access** (15 минут, настраивается
+  `ACCESS_TOKEN_TTL_MINUTES`) + JWT **refresh** (30 дней,
+  `REFRESH_TOKEN_TTL_DAYS`), оба в httpOnly/Secure/SameSite=Lax cookie
+  (`ecobalance_session`, `ecobalance_refresh`). Токены никогда не
+  попадают в JS (не читаются через `document.cookie`), что защищает от
+  XSS-эксфильтрации сессии.
+- `POST /auth/refresh` выдаёт новый access-токен по действительному
+  refresh-токену. **Ротация refresh-токена при каждом использовании не
+  реализована** в этой версии — токен просто перевыпускается на тот же
+  срок при логине; полноценная ротация с инвалидацией предыдущего
+  refresh-токена (defence-in-depth против кражи токена) — открытый
+  пункт.
+- Роли: `company_user` (обычный пользователь), `admin` (зарезервирована
+  в схеме `User.role`; отдельных admin-эндпоинтов для просмотра
+  справочников/пользователей в этой версии не реализовано).
+
+## Rate limiting
+
+`slowapi` (`Limiter`, in-memory хранилище) на `/auth/register` (10/мин),
+`/auth/login` (10/мин), `/auth/refresh` (20/мин), ключ — IP-адрес
+клиента. **Важное ограничение**: in-memory хранилище не переживает
+перезапуск процесса и не синхронизируется между несколькими
+инстансами API — для single-instance демо-прототипа этого достаточно,
+для продакшена с несколькими репликами нужен внешний стор (Redis).
+
+## Изоляция между компаниями
+
+Каждый защищённый эндпоинт проверяет `resource.company_id ==
+current_user.company_id` и возвращает `404` (не `403`) при
+несовпадении — подтверждено интеграционным тестом
+(`tests/test_api_integration.py::test_company_isolation`).
+
+## CORS
+
+`CORSMiddleware` ограничен списком из `API_CORS_ORIGINS`
+(`.env`/`.env.example`), с `allow_credentials=True` (нужно для
+cookie-сессии между `localhost:3000` и `localhost:8000`).
+
+## Не реализовано (открытые пункты безопасности)
+
+- CSRF-защита для cookie-сессий (SameSite=Lax снижает риск для
+  простых GET-навигаций, но не заменяет полноценный CSRF-токен для
+  state-changing запросов с других источников).
+- `AuditLog` на финализацию расчётов и выгрузку отчётов — таблица
+  создана в схеме, но запись в неё не подключена к соответствующим
+  эндпоинтам.
+- Заголовки безопасности (CSP, HSTS и т.п.) на уровне FastAPI-ответов —
+  не настроены отдельным middleware в этой версии.

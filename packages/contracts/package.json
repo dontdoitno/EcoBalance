@@ -3,9 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "OpenAPI schema and generated TypeScript client for the EcoBalance API. Wired up in Stage 2.",
+  "description": "OpenAPI schema and generated TypeScript client for the EcoBalance API.",
   "main": "index.ts",
   "scripts": {
-    "generate": "echo 'generate: not implemented yet (Stage 2)' && exit 0"
+    "generate": "cd ../../apps/api && uv run python -m scripts.export_openapi && cd ../../packages/contracts && openapi-typescript ../../docs/api/openapi.json -o ./api.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0"
   }
 }

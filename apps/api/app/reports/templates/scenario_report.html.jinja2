@@ -1,0 +1,45 @@
+{% extends "base.html.jinja2" %}
+{% block content %}
+<h1>EcoBalance</h1>
+<p class="subtitle">Отчёт по сценарию оптимизации</p>
+
+{% if has_demo_factors %}
+<div class="banner">⚠ Расчёт использует демонстрационные коэффициенты выбросов (не верифицированные данные).</div>
+{% endif %}
+
+<h2>Компания и продукт</h2>
+<div class="kv">
+  <p><strong>Компания:</strong> {{ company_name }}</p>
+  <p><strong>Продукт:</strong> {{ product_name }}</p>
+  <p><strong>Сценарий:</strong> {{ scenario_name }}</p>
+</div>
+
+<h2>Было → стало</h2>
+<table>
+  <thead><tr><th></th><th>До, кг CO₂-экв./ед.</th><th>После, кг CO₂-экв./ед.</th><th>Изменение</th></tr></thead>
+  <tbody>
+    <tr><td>Общий след (PCF)</td><td>{{ baseline_pcf }}</td><td>{{ scenario_pcf }}</td><td>−{{ delta_pcf }} (−{{ delta_pct }}%)</td></tr>
+    {% if cbam_applicable %}
+    <tr><td>Встроенные выбросы CBAM</td><td>{{ baseline_cbam }}</td><td>{{ scenario_cbam }}</td><td>−{{ delta_cbam }}</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<h2>Применённые меры</h2>
+<table>
+  <thead><tr><th>Мера</th><th>Scope</th><th>Сложность</th><th>Окупаемость</th></tr></thead>
+  <tbody>
+    {% for measure in measures %}
+    <tr>
+      <td>{{ measure.title }}</td>
+      <td>{{ measure.scope }}</td>
+      <td>{{ measure.complexity_label }}</td>
+      <td>{{ measure.payback }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p>Допущения по каждой мере редактируемы пользователем; эффект всегда получен пересчётом
+расчётного ядра на изменённых входных данных, а не применением фиксированного процента.</p>
+{% endblock %}

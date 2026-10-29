@@ -1,0 +1,66 @@
+{% extends "base.html.jinja2" %}
+{% block content %}
+<h1>EcoBalance</h1>
+<p class="subtitle">Отчёт PCF (ISO 14067) — углеродный след продукта</p>
+
+{% if has_demo_factors %}
+<div class="banner">⚠ Расчёт использует демонстрационные коэффициенты выбросов (не верифицированные данные). Не предназначен для подачи в реальную декларацию.</div>
+{% endif %}
+
+<h2>Информация о компании и продукте</h2>
+<div class="kv">
+  <p><strong>Компания:</strong> {{ company_name }}</p>
+  <p><strong>Продукт:</strong> {{ product_name }}</p>
+  <p><strong>Границы системы:</strong> {{ boundary }}</p>
+  <p><strong>Функциональная единица:</strong> 1 {{ functional_unit }}</p>
+  <p><strong>GWP:</strong> {{ gwp_set }}</p>
+</div>
+
+<h2>Результат расчёта</h2>
+<div class="metric">
+  <div class="value">{{ pcf_full }}</div>
+  <div class="unit">кг CO₂-экв. на {{ functional_unit }} продукта (Scope 1–3)</div>
+</div>
+
+<table>
+  <thead><tr><th>Scope</th><th>Значение, кг CO₂-экв.</th></tr></thead>
+  <tbody>
+    <tr><td>Scope 1 (прямые)</td><td>{{ scope1 }}</td></tr>
+    <tr><td>Scope 2 (энергия)</td><td>{{ scope2 }}</td></tr>
+    <tr><td>Scope 3 (цепочка поставок)</td><td>{{ scope3 }}</td></tr>
+  </tbody>
+</table>
+
+<h2>Карта «слабых мест» (hotspots)</h2>
+<table>
+  <thead><tr><th>Источник</th><th>Scope</th><th>Вклад</th><th>Оценка</th></tr></thead>
+  <tbody>
+    {% for h in hotspots %}
+    <tr>
+      <td>{{ h.label }}</td>
+      <td>{{ h.scope }}</td>
+      <td>{{ h.contribution_pct }}%</td>
+      <td class="rating-{{ h.rating }}">{{ rating_labels[h.rating] }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Качество данных</h2>
+<div class="kv">
+  {% if data_quality_score is not none %}
+  <p><strong>Оценка качества данных:</strong> {{ data_quality_score }}/100</p>
+  {% endif %}
+  <ul>
+    {% for flag in data_quality_flags %}
+    <li>{{ flag.message }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<h2>Методология и ограничения</h2>
+<p>Расчёт выполнен по методике LCA (ISO 14040/14044), ISO 14067:2018 (ГОСТ Р ИСО 14067-2021),
+GHG Protocol, ISO 14064-1, с учётом отраслевого руководства TfS PCF Guideline. Формулы —
+см. docs/methodology/formulas.md. Коэффициент аллокации между сопряжёнными продуктами:
+{{ allocation_factor }}.</p>
+{% endblock %}
