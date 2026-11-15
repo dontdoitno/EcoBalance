@@ -30,7 +30,15 @@ export default function ProfilePage() {
     queryFn: async () => (await api.GET("/installations")).data ?? [],
   });
 
-  const [form, setForm] = useState({ name: "", inn: "", industry: "", size: "", region_id: "" });
+  const [form, setForm] = useState({
+    name: "",
+    inn: "",
+    industry: "",
+    size: "",
+    region_id: "",
+    country: "",
+    eori: "",
+  });
 
   useEffect(() => {
     if (company) {
@@ -40,6 +48,8 @@ export default function ProfilePage() {
         industry: company.industry ?? "",
         size: company.size ?? "",
         region_id: company.region_id ?? "",
+        country: company.country ?? "",
+        eori: company.eori ?? "",
       });
     }
   }, [company]);
@@ -107,6 +117,18 @@ export default function ProfilePage() {
                 </option>
               ))}
             </Select>
+          </div>
+          <div>
+            <Label htmlFor="country">{dict.profile.country}</Label>
+            <Input
+              id="country"
+              value={form.country}
+              onChange={(e) => setForm({ ...form, country: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="eori">{dict.profile.eori}</Label>
+            <Input id="eori" value={form.eori} onChange={(e) => setForm({ ...form, eori: e.target.value })} />
           </div>
           <div>
             <Label htmlFor="region">{dict.profile.region}</Label>

@@ -171,6 +171,12 @@ class CalculationInput(BaseModel):
 
     data_quality: DataQualityInput | None = None
 
+    # CBAM report field "Carbon Price Paid" (cbamtrack.com-style template):
+    # carbon price actually paid in the country of origin, reported by the
+    # declarant — not a benchmark/reference price, so there is no catalog
+    # lookup for it.
+    carbon_price_paid_eur_per_t: Decimal | None = None
+
     @model_validator(mode="after")
     def _allocation_required_with_co_products(self) -> CalculationInput:
         if self.co_products and self.allocation is None:

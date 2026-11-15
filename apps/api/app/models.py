@@ -26,6 +26,11 @@ class Company(Base):
     industry: Mapped[str | None] = mapped_column(String(255), nullable=True)
     size: Mapped[str | None] = mapped_column(String(50), nullable=True)
     region_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # CBAM declarant fields (cbamtrack.com-style report template): EORI is an
+    # EU economic-operator id, often absent for a non-EU producer — both
+    # stay optional and simply print as empty in the report when unset.
+    country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    eori: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     users: Mapped[list[User]] = relationship(back_populates="company")

@@ -7,10 +7,32 @@
 <div class="banner">⚠ Расчёт использует демонстрационные коэффициенты выбросов (не верифицированные данные). Структура отчёта ориентирована на Implementing Regulation (EU) 2025/2547 и требует верификации по первоисточнику перед использованием в реальной декларации.</div>
 {% endif %}
 
+<h2>Report Template (cbamtrack.com format)</h2>
+<table>
+  <thead><tr><th>Field</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Declarant Name</td><td>{{ cbamtrack_table.declarant_name }}</td></tr>
+    <tr><td>EORI Number</td><td>{{ cbamtrack_table.eori_number }}</td></tr>
+    <tr><td>CN Code</td><td>{{ cbamtrack_table.cn_code }}</td></tr>
+    <tr><td>Product Description</td><td>{{ cbamtrack_table.product_description }}</td></tr>
+    <tr><td>Country of Origin</td><td>{{ cbamtrack_table.country_of_origin }}</td></tr>
+    <tr><td>Quantity (tonnes)</td><td>{{ cbamtrack_table.quantity_t }}</td></tr>
+    <tr><td>Direct Emissions (tCO₂e)</td><td>{{ cbamtrack_table.direct_emissions_t }}</td></tr>
+    <tr><td>Indirect Emissions (tCO₂e)</td><td>{{ cbamtrack_table.indirect_emissions_t }}</td></tr>
+    <tr><td>Total Embedded Emissions (tCO₂e)</td><td>{{ cbamtrack_table.total_embedded_emissions_t }}</td></tr>
+    <tr><td>Emission Factor Source</td><td>{{ cbamtrack_table.emission_factor_source }}</td></tr>
+    <tr><td>Carbon Price Paid</td><td>{{ cbamtrack_table.carbon_price_paid }}</td></tr>
+    <tr><td>Free Allocation</td><td>{{ cbamtrack_table.free_allocation_pct }}</td></tr>
+  </tbody>
+</table>
+<p>Поля EORI Number, Country of Origin и Carbon Price Paid заполняются в профиле компании и на
+первом шаге расчёта — если не заполнены, показывают «—». Free Allocation — официальный график
+фазаута бесплатных квот EU ETS по CBAM Regulation (EU) 2023/956, Art. 31a, для года завершения
+расчёта.</p>
+
 <h2>Данные установки и товара</h2>
 <div class="kv">
   <p><strong>Оператор установки:</strong> {{ company_name }}</p>
-  <p><strong>Номер EORI:</strong> не собирается в этой версии</p>
   <p><strong>Товар:</strong> {{ product_name }}</p>
   <p><strong>CN-код:</strong> {{ cn_code }}</p>
   <p><strong>Тип товара (Annex I):</strong> {% if is_complex_good %}сложный (с прекурсорами){% else %}простой{% endif %}</p>
@@ -32,7 +54,6 @@
   <p><strong>Маршрут производства:</strong> {{ route_name }}</p>
   {% endif %}
   <p><strong>Отчётный период:</strong> {{ period }} (специализированное поле начала/конца периода не реализовано — см. docs/methodology/cbam-mapping.md)</p>
-  <p><strong>Уплаченная цена CO₂ в стране происхождения:</strong> не собирается в этой версии</p>
 </div>
 
 <h2>Встроенные удельные выбросы</h2>

@@ -41,6 +41,8 @@ interface WizardForm {
   product_id: string;
   route_id: string;
   processes: ProcessRow[];
+  actual_output_t: string;
+  carbon_price_paid: string;
   raw_materials: RawMaterialRow[];
   electricity_mwh: string;
   region_id: string;
@@ -51,6 +53,8 @@ const EMPTY_FORM: WizardForm = {
   product_id: "",
   route_id: "",
   processes: [],
+  actual_output_t: "",
+  carbon_price_paid: "",
   raw_materials: [{ material_id: "", quantity_t_per_unit: "" }],
   electricity_mwh: "",
   region_id: "",
@@ -99,6 +103,8 @@ export default function CalculationWizardPage() {
           output_share_pct: p.output_share_pct ?? "",
           ef_override: p.ef_override_kg_co2_per_unit ?? "",
         })) ?? [],
+        actual_output_t: (input.actual_output_t as string) ?? "",
+        carbon_price_paid: (input.carbon_price_paid_eur_per_t as string) ?? "",
         raw_materials:
           (input.raw_materials as RawMaterialRow[] | undefined)?.length
             ? (input.raw_materials as RawMaterialRow[])
@@ -126,6 +132,8 @@ export default function CalculationWizardPage() {
           output_share_pct: row.output_share_pct || "100",
           ef_override_kg_co2_per_unit: row.ef_override || undefined,
         })),
+      actual_output_t: form.actual_output_t || undefined,
+      carbon_price_paid_eur_per_t: form.carbon_price_paid || undefined,
       raw_materials: form.raw_materials
         .filter((row) => row.material_id && row.quantity_t_per_unit)
         .map((row) => ({ material_id: row.material_id, quantity_t_per_unit: row.quantity_t_per_unit })),
@@ -339,6 +347,28 @@ export default function CalculationWizardPage() {
                 {dict.wizard.addRoute}
               </Button>
             )}
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-5">
+              <div>
+                <Label htmlFor="actual_output_t">{dict.wizard.actualOutput}</Label>
+                <Input
+                  id="actual_output_t"
+                  type="number"
+                  step="0.01"
+                  value={form.actual_output_t}
+                  onChange={(e) => setForm({ ...form, actual_output_t: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="carbon_price_paid">{dict.wizard.carbonPricePaid}</Label>
+                <Input
+                  id="carbon_price_paid"
+                  type="number"
+                  step="0.01"
+                  value={form.carbon_price_paid}
+                  onChange={(e) => setForm({ ...form, carbon_price_paid: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
         )}
 

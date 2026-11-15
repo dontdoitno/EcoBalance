@@ -40,6 +40,8 @@ class CompanyIn(BaseModel):
     industry: str | None = None
     size: str | None = None
     region_id: str | None = None
+    country: str | None = None
+    eori: str | None = None
 
 
 class CompanyOut(CompanyIn):

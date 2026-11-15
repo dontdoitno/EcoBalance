@@ -6,7 +6,10 @@ auth, draft/calculate/finalize, scenarios, reports, and company isolation.
 
 from __future__ import annotations
 
+from io import BytesIO
+
 from httpx import AsyncClient
+from openpyxl import load_workbook
 
 
 async def _register(client: AsyncClient, email: str, company_name: str) -> dict:
@@ -150,3 +153,56 @@ async def test_reference_endpoints_public(client: AsyncClient) -> None:
 async def test_unauthenticated_requests_rejected(client: AsyncClient) -> None:
     response = await client.get("/calculations")
     assert response.status_code == 401
+
+
+async def test_cbam_report_matches_cbamtrack_template(client: AsyncClient) -> None:
+    """The CBAM report's 12-field summary table must mirror
+    cbamtrack.com/cbam-reporting-template field-for-field, filled with this
+    calculation's own data (inner_docs/new_features.md item 3 follow-up).
+    """
+    await _register(client, "cbamtrack@example.com", "CBAMtrack Co")
+    await client.patch(
+        "/companies/me",
+        json={"name": "CBAMtrack Co", "country": "Russia", "eori": "RU999888777"},
+    )
+    calculation_id = (await client.post("/calculations", json={"name": "Ammonia"})).json()["id"]
+    await client.patch(
+        f"/calculations/{calculation_id}",
+        json={
+            "product_id": "ammonia",
+            "route_id": "ammonia__smr",
+            "actual_output_t": "250",
+            "carbon_price_paid_eur_per_t": "12.5",
+            "raw_materials": [
+                {"material_id": "natural_gas_feedstock", "quantity_t_per_unit": "0.6"}
+            ],
+            "electricity": {
+                "consumption_mwh_per_unit": "0.2",
+                "region_id": "pricing_zone_europe_ural",
+            },
+        },
+    )
+    await client.post(f"/calculations/{calculation_id}/calculate")
+
+    xlsx_response = await client.get(
+        f"/reports/{calculation_id}", params={"report_type": "cbam", "report_format": "xlsx"}
+    )
+    assert xlsx_response.status_code == 200
+    workbook = load_workbook(BytesIO(xlsx_response.content))
+    assert "Шаблон отчёта" in workbook.sheetnames
+    rows = list(workbook["Шаблон отчёта"].iter_rows(values_only=True))
+    fields = dict(rows[1:])
+    assert fields["Declarant Name"] == "CBAMtrack Co"
+    assert fields["EORI Number"] == "RU999888777"
+    assert fields["CN Code"] == "2814 10 000"
+    assert fields["Product Description"] == "Аммиак"
+    assert fields["Country of Origin"] == "Russia"
+    assert fields["Quantity (tonnes)"] == 250
+    assert fields["Carbon Price Paid"] == "12.50 €/t"
+    assert fields["Free Allocation"].endswith("%")
+
+    pdf_response = await client.get(
+        f"/reports/{calculation_id}", params={"report_type": "cbam", "report_format": "pdf"}
+    )
+    assert pdf_response.status_code == 200
+    assert pdf_response.content[:4] == b"%PDF"

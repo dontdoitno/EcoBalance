@@ -474,6 +474,34 @@ def get_product(product_id: str) -> Product:
     raise KeyError(f"Unknown product id: {product_id!r}")
 
 
+# --- EU ETS free allocation phase-out for CBAM sectors ------------------
+# Official schedule from CBAM Regulation (EU) 2023/956, Article 31a
+# (amending EU ETS Directive 2003/87/EC Annex): the share of free EU ETS
+# allowances that CBAM-sector installations still receive, phasing out to
+# 0% by 2034. This is a report field only ("Free Allocation" in the
+# cbamtrack.com-style template) — it does not feed into any emissions
+# calculation here.
+FREE_ALLOCATION_PCT: dict[int, Decimal] = {
+    2026: Decimal("97.5"),
+    2027: Decimal("95"),
+    2028: Decimal("90"),
+    2029: Decimal("77.5"),
+    2030: Decimal("51.5"),
+    2031: Decimal("39"),
+    2032: Decimal("26.5"),
+    2033: Decimal("14"),
+    2034: Decimal("0"),
+}
+
+
+def get_free_allocation_pct(year: int) -> Decimal:
+    if year < min(FREE_ALLOCATION_PCT):
+        return Decimal("100")
+    if year > max(FREE_ALLOCATION_PCT):
+        return Decimal("0")
+    return FREE_ALLOCATION_PCT[year]
+
+
 def get_route(route_id: str) -> Route:
     for route in ROUTES:
         if route.id == route_id:
