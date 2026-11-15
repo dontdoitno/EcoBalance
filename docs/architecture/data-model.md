@@ -1,7 +1,10 @@
 # Модель данных
 
-Реализация: `apps/api/app/models.py` (SQLAlchemy 2.0, async), миграция —
-`alembic/versions/d5c26a1dba5e_initial_schema.py`.
+Реализация: `apps/api/app/models.py` (SQLAlchemy 2.0, async), миграции —
+`alembic/versions/d5c26a1dba5e_initial_schema.py` (начальная схема),
+`alembic/versions/78d883ca545b_add_company_country_and_eori_fields.py`
+(`Company.country`/`Company.eori`, для CBAM-отчёта по образцу
+cbamtrack.com — см. [cbam-mapping.md](../methodology/cbam-mapping.md)).
 
 ```mermaid
 erDiagram
@@ -22,7 +25,7 @@ erDiagram
 
 | Сущность | Назначение | Примечание |
 |---|---|---|
-| `Company` | компания-экспортёр | `inn`, `industry`, `size`, `region_id` |
+| `Company` | компания-экспортёр | `inn`, `industry`, `size`, `region_id`, `country`/`eori` (опциональные, для CBAM-отчёта) |
 | `User` | пользователь ЛК | `role` (`company_user`/`admin`), привязан к одной `Company` |
 | `Installation` | производственная площадка | опционально привязана к расчёту |
 | `Calculation` | версия расчёта | `status` (`draft`/`final`), `version`, `supersedes_id` (связь версий), `factor_version` |

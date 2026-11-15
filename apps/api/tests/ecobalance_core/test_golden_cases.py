@@ -21,12 +21,12 @@ def test_ammonia_smr() -> None:
     gas, grid electricity, one outbound truck leg. CBAM-applicable.
 
     Hand-computed:
-      fuel combustion = 1 thousand m3 * 34 GJ/thousand m3 * 56.1 kg CO2/GJ = 1907.4
-      upstream        = 0.6 t/t * 2200 kg CO2/t                            = 1320.0
-      electricity     = 0.2 MWh/t * 350 kg CO2/MWh                          =   70.0
+      fuel combustion = 1 thousand m3 * 34 GJ/thousand m3 * 56.1 kg CO2/GJ   = 1907.4
+      upstream        = 0.6 t/t * 2200 kg CO2/t                             = 1320.0
+      electricity     = 0.2 MWh/t * 332.44 kg CO2/MWh (Europe&Ural zone)    =   66.488
       transport       = 1 t * 500 km * 0.162 kg CO2/t.km                    =   81.0
-      pcf_full = 1907.4 + 70.0 + 1320.0 + 81.0 = 3378.4
-      cbam_embedded = 1907.4 + 70.0 + 1320.0 = 3297.4 (excludes transport)
+      pcf_full = 1907.4 + 66.488 + 1320.0 + 81.0 = 3374.888 -> 3374.89
+      cbam_embedded = 1907.4 + 66.488 + 1320.0 = 3293.888 -> 3293.89 (excludes transport)
     """
     calculation_input = CalculationInput(
         product_id="ammonia",
@@ -39,7 +39,7 @@ def test_ammonia_smr() -> None:
             )
         ],
         electricity=ElectricityInput(
-            consumption_mwh_per_unit=Decimal("0.2"), region_id="oes_center"
+            consumption_mwh_per_unit=Decimal("0.2"), region_id="pricing_zone_europe_ural"
         ),
         transport=[
             TransportLegInput(
@@ -53,11 +53,11 @@ def test_ammonia_smr() -> None:
 
     result = calculate(calculation_input)
 
-    assert result.pcf_full_kg_co2_per_unit == Decimal("3378.40")
+    assert result.pcf_full_kg_co2_per_unit == Decimal("3374.89")
     assert result.cbam_applicable is True
-    assert result.cbam_embedded_kg_co2_per_unit == Decimal("3297.40")
+    assert result.cbam_embedded_kg_co2_per_unit == Decimal("3293.89")
     assert result.scope1_kg_co2_per_unit == Decimal("1907.40")
-    assert result.scope2_kg_co2_per_unit == Decimal("70.00")
+    assert result.scope2_kg_co2_per_unit == Decimal("66.49")
     assert result.scope3_kg_co2_per_unit == Decimal("1401.00")
 
     total_pct = sum((item.percentage for item in result.breakdown), start=Decimal("0"))
@@ -74,8 +74,8 @@ def test_pvc_suspension_not_cbam_applicable() -> None:
 
     Hand-computed:
       upstream    = 0.45*1500 + 0.58*1100 = 675 + 638 = 1313.0
-      electricity = 0.35 MWh/t * 580 kg CO2/MWh        = 203.0
-      pcf_full = 1313.0 + 203.0 = 1516.0
+      electricity = 0.35 MWh/t * 332.44 kg CO2/MWh (Europe&Ural zone) = 116.354
+      pcf_full = 1313.0 + 116.354 = 1429.354 -> 1429.35
     """
     calculation_input = CalculationInput(
         product_id="pvc",
@@ -86,13 +86,13 @@ def test_pvc_suspension_not_cbam_applicable() -> None:
             RawMaterialInput(material_id="chlorine_feedstock", quantity_t_per_unit=Decimal("0.58")),
         ],
         electricity=ElectricityInput(
-            consumption_mwh_per_unit=Decimal("0.35"), region_id="oes_ural"
+            consumption_mwh_per_unit=Decimal("0.35"), region_id="pricing_zone_europe_ural"
         ),
     )
 
     result = calculate(calculation_input)
 
-    assert result.pcf_full_kg_co2_per_unit == Decimal("1516.00")
+    assert result.pcf_full_kg_co2_per_unit == Decimal("1429.35")
     assert result.cbam_applicable is False
     assert result.cbam_embedded_kg_co2_per_unit is None
     assert result.cbam_not_applicable_reason is not None
@@ -106,8 +106,8 @@ def test_urea_with_captured_co2() -> None:
     Hand-computed (output = 100 t/year, process figures are annual totals):
       process = (200t - 150t) * 1000 / 100 = 500.0 kg CO2/t
       upstream = 0.57*2400 + 0.75*0 = 1368.0
-      electricity = 0.05 MWh/t * 350 = 17.5
-      pcf_full = 500.0 + 17.5 + 1368.0 = 1885.5
+      electricity = 0.05 MWh/t * 332.44 (Europe&Ural zone) = 16.622
+      pcf_full = 500.0 + 16.622 + 1368.0 = 1884.622 -> 1884.62
     """
     calculation_input = CalculationInput(
         product_id="urea",
@@ -118,7 +118,7 @@ def test_urea_with_captured_co2() -> None:
             RawMaterialInput(material_id="co2_feedstock", quantity_t_per_unit=Decimal("0.75")),
         ],
         electricity=ElectricityInput(
-            consumption_mwh_per_unit=Decimal("0.05"), region_id="oes_center"
+            consumption_mwh_per_unit=Decimal("0.05"), region_id="pricing_zone_europe_ural"
         ),
         process=ProcessEmissionsInput(
             co2_process_t_per_year=Decimal("200"),
@@ -129,9 +129,9 @@ def test_urea_with_captured_co2() -> None:
 
     result = calculate(calculation_input)
 
-    assert result.pcf_full_kg_co2_per_unit == Decimal("1885.50")
+    assert result.pcf_full_kg_co2_per_unit == Decimal("1884.62")
     assert result.cbam_applicable is True
-    assert result.cbam_embedded_kg_co2_per_unit == Decimal("1885.50")
+    assert result.cbam_embedded_kg_co2_per_unit == Decimal("1884.62")
 
     # Capturing more CO2 must not increase the footprint (never make CCS look harmful).
     without_capture = calculation_input.model_copy(deep=True)

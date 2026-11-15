@@ -57,9 +57,15 @@ async def get_report(
     input_row = input_row_result.scalar_one_or_none()
     product_id = (input_row.data.get("product_id") if input_row else None) or None
     route_id = (input_row.data.get("route_id") if input_row else None) or None
+    raw_materials = (input_row.data.get("raw_materials") if input_row else None) or []
+    actual_output_t = (input_row.data.get("actual_output_t") if input_row else None) or "1"
+    carbon_price_paid = (
+        input_row.data.get("carbon_price_paid_eur_per_t") if input_row else None
+    )
     product = reference.get_product(product_id) if product_id else None
     product_name = product.name if product else "—"
-    route_name = route_id or "—"
+    route_name = reference.get_route(route_id).name if route_id else "—"
+    report_year = (calculation.finalized_at or calculation.created_at).year
 
     result_row_result = await db.execute(
         select(CalculationResultRow).where(CalculationResultRow.calculation_id == calculation.id)
@@ -79,6 +85,14 @@ async def get_report(
 
     generated_at = datetime.now(UTC).strftime("%d.%m.%Y %H:%M UTC")
 
+    cbam_declarant = {
+        "country": company.country,
+        "eori": company.eori,
+        "actual_output_t": actual_output_t,
+        "carbon_price_paid_eur_per_t": carbon_price_paid,
+        "free_allocation_pct": str(reference.get_free_allocation_pct(report_year)),
+    }
+
     if report_type == "scenario":
         scenario = await _load_scenario(db, calculation.id, scenario_id)
         baseline = scenario.result_data["baseline"]  # type: ignore[index]
@@ -92,6 +106,8 @@ async def get_report(
             company_name=company.name,
             product_name=product_name,
             route_name=route_name,
+            raw_materials=raw_materials,
+            cbam_declarant=cbam_declarant,
             result=payload_for_data_formats,
             product_id=product_id,
             ets_price_eur_per_t=ets_price_eur_per_t,
@@ -109,6 +125,8 @@ async def get_report(
             company_name=company.name,
             product_name=product_name,
             route_name=route_name,
+            raw_materials=raw_materials,
+            cbam_declarant=cbam_declarant,
             result=result,
             product_id=product_id,
             ets_price_eur_per_t=ets_price_eur_per_t,
@@ -177,6 +195,8 @@ def _render_body(
     company_name: str,
     product_name: str,
     route_name: str,
+    raw_materials: list[dict[str, Any]],
+    cbam_declarant: dict[str, Any],
     result: dict[str, Any] | None,
     product_id: str | None,
     ets_price_eur_per_t: float,
@@ -194,6 +214,17 @@ def _render_body(
         )
     if report_format == "xlsx":
         assert result is not None
+        if report_type == "cbam":
+            assert product_id is not None
+            return generator.render_cbam_xlsx(
+                company_name=company_name,
+                product_name=product_name,
+                product_id=product_id,
+                route_name=route_name,
+                raw_materials=raw_materials,
+                cbam_declarant=cbam_declarant,
+                result=result,
+            )
         return generator.render_result_xlsx(
             company_name=company_name, product_name=product_name, result=result
         )
@@ -213,6 +244,8 @@ def _render_body(
             product_name=product_name,
             product_id=product_id,
             route_name=route_name,
+            raw_materials=raw_materials or [],
+            cbam_declarant=cbam_declarant,
             period="—",
             result=result,
             ets_price_eur_per_t=ets_price_eur_per_t,

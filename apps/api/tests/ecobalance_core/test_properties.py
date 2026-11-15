@@ -67,7 +67,9 @@ def test_breakdown_sums_to_roughly_100_percent(
             )
         ],
         electricity=(
-            ElectricityInput(consumption_mwh_per_unit=electricity_mwh, region_id="oes_center")
+            ElectricityInput(
+                consumption_mwh_per_unit=electricity_mwh, region_id="pricing_zone_europe_ural"
+            )
             if electricity_mwh > 0
             else None
         ),

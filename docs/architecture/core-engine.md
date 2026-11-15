@@ -41,6 +41,17 @@ result = calculate(CalculationInput(product_id="ammonia", ...))
 `scope2.py`, `scope3.py`, `allocation.py`) остаются неусечённым
 `Decimal`.
 
+`CalculationInput.processes` (опциональный список маршрутов с долями
+выпуска и опциональным своим коэффициентом) усредняет
+`cbam_embedded_kg_co2_per_unit`/`pcf_full_kg_co2_per_unit` по марш­рутам
+— см. [cbam.md](../methodology/cbam.md).
+Scope 1/2/3-разбивка при этом остаётся равной базовому расчёту (не
+раскладывается по маршрутам) — явное упрощение, т.к. вручную введённый
+коэффициент маршрута не содержит собственного разделения по Scope.
+`Product.requires_precursor_accounting` (по умолчанию `True`) зануляет
+вклад `raw_materials` в `cbam_embedded` для «простых товаров» по
+правилу из EU CBAM Guidance No.3.
+
 ## Ошибки
 
 | Исключение | Когда |

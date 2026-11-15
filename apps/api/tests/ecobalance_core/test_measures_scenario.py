@@ -19,7 +19,9 @@ def _input() -> CalculationInput:
                 material_id="natural_gas_feedstock", quantity_t_per_unit=Decimal("0.6")
             )
         ],
-        electricity=ElectricityInput(consumption_mwh_per_unit=Decimal("0.8"), region_id="oes_ural"),
+        electricity=ElectricityInput(
+            consumption_mwh_per_unit=Decimal("0.8"), region_id="pricing_zone_europe_ural"
+        ),
         transport=[
             TransportLegInput(
                 direction="outbound_product",

@@ -13,10 +13,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { dict } from "@/lib/dictionaries/ru";
 import { api } from "@/lib/api-client";
+import { useProducts } from "@/lib/hooks/use-reference";
 import { formatKgCo2, formatPercent } from "@/lib/format";
 import type { CalculationDetail, CalculationResult, MeasureCatalog, ScenarioResult } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
+// Mirrors ecobalance_core.reference.FREE_ALLOCATION_PCT (CBAM Regulation
+// (EU) 2023/956, Art. 31a) — duplicated here so the web preview doesn't
+// need a dedicated endpoint for a single lookup value.
+const FREE_ALLOCATION_PCT: Record<number, number> = {
+  2026: 97.5,
+  2027: 95,
+  2028: 90,
+  2029: 77.5,
+  2030: 51.5,
+  2031: 39,
+  2032: 26.5,
+  2033: 14,
+  2034: 0,
+};
+
+function freeAllocationPct(year: number): number {
+  const years = Object.keys(FREE_ALLOCATION_PCT).map(Number);
+  if (year < Math.min(...years)) return 100;
+  if (year > Math.max(...years)) return 0;
+  return FREE_ALLOCATION_PCT[year] ?? 0;
+}
 
 type ReportType = "pcf" | "cbam" | "scenario";
 type ReportFormat = "pdf" | "xlsx" | "json";
@@ -169,6 +192,13 @@ function ReportsContent() {
       ).data as unknown as CalculationDetail,
   });
 
+  const { data: company } = useQuery({
+    queryKey: ["company"],
+    queryFn: async () => (await api.GET("/companies/me")).data,
+  });
+
+  const { data: products } = useProducts();
+
   const { data: scenarios } = useQuery<ScenarioResult[]>({
     queryKey: ["scenarios", params.id],
     enabled: Boolean(scenarioId),
@@ -266,7 +296,98 @@ function ReportsContent() {
                   <NumberTicker value={Number(result.cbam_embedded_kg_co2_per_unit)} /> кг CO₂-экв.
                 </p>
                 <p className="mt-1 text-sm text-text-faint">{dict.reports.cbamFigureNote}</p>
+                {detail && company && (() => {
+                  const input = detail.input as Record<string, unknown>;
+                  const product = products?.find((p) => p.id === input.product_id);
+                  const quantity = Number(input.actual_output_t ?? "1");
+                  const carbonPrice = input.carbon_price_paid_eur_per_t as string | undefined;
+                  const year = new Date(detail.finalized_at ?? detail.created_at).getFullYear();
+                  const hasDemoFactors = result.data_quality_flags.some((f) => f.code === "demo_factors");
+                  const toTonnes = (kgPerUnit: number) => ((kgPerUnit * quantity) / 1000).toFixed(3);
+                  const rows: [string, string][] = [
+                    ["Declarant Name", company.name ?? "—"],
+                    ["EORI Number", company.eori || "—"],
+                    ["CN Code", product?.cn_code || "—"],
+                    ["Product Description", product?.name ?? "—"],
+                    ["Country of Origin", company.country || "—"],
+                    ["Quantity (tonnes)", quantity.toString()],
+                    ["Direct Emissions (tCO₂e)", toTonnes(Number(result.scope1_kg_co2_per_unit))],
+                    ["Indirect Emissions (tCO₂e)", toTonnes(Number(result.scope2_kg_co2_per_unit))],
+                    [
+                      "Total Embedded Emissions (tCO₂e)",
+                      toTonnes(Number(result.cbam_embedded_kg_co2_per_unit)),
+                    ],
+                    [
+                      "Emission Factor Source",
+                      hasDemoFactors
+                        ? "Default values (demo/unverified)"
+                        : "Verified (EU CBAM Guidance No.3 / IPCC 2006 GL)",
+                    ],
+                    ["Carbon Price Paid", carbonPrice ? `${Number(carbonPrice).toFixed(2)} €/t` : "—"],
+                    ["Free Allocation", `${freeAllocationPct(year)}%`],
+                  ];
+                  return (
+                    <div className="mt-5 border-t border-border pt-4">
+                      <p className="text-xs text-text-faint">Report Template (cbamtrack.com format)</p>
+                      <table className="mt-2 w-full text-sm">
+                        <tbody className="divide-y divide-border">
+                          {rows.map(([field, value]) => (
+                            <tr key={field}>
+                              <td className="py-2 text-text-faint">{field}</td>
+                              <td className="py-2 text-right text-text">{value}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
                 <MetaRow result={result} />
+                <table className="mt-5 w-full text-sm">
+                  <thead className="text-xs text-text-faint">
+                    <tr>
+                      <th className="pb-2 text-left font-medium">Компонент</th>
+                      <th className="pb-2 text-left font-medium">Scope</th>
+                      <th className="pb-2 text-right font-medium">Значение, кг CO₂-экв.</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {result.breakdown
+                      .filter((item) => item.category !== "transport" && item.category !== "waste")
+                      .map((item) => (
+                        <tr key={item.category}>
+                          <td className="py-3 font-medium text-text">{item.label}</td>
+                          <td className="py-3 text-text-faint">{item.scope}</td>
+                          <td className="py-3 text-right text-text">{formatKgCo2(Number(item.value_kg_co2_per_unit))}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {result.processes.length > 1 && (
+                  <div className="mt-5 border-t border-border pt-4">
+                    <p className="text-xs text-text-faint">Маршруты производства (усреднено по доле выпуска)</p>
+                    <table className="mt-2 w-full text-sm">
+                      <thead className="text-xs text-text-faint">
+                        <tr>
+                          <th className="pb-2 text-left font-medium">Маршрут</th>
+                          <th className="pb-2 text-right font-medium">Доля, %</th>
+                          <th className="pb-2 text-right font-medium">Коэффициент</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {result.processes.map((process) => (
+                          <tr key={process.route_id}>
+                            <td className="py-2 text-text">{process.route_name}</td>
+                            <td className="py-2 text-right text-text">{process.output_share_pct}</td>
+                            <td className="py-2 text-right text-text-faint">
+                              {process.used_override ? "свой коэффициент" : "расчётный"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </>
             ) : (
               <div className="mt-5">

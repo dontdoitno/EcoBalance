@@ -7,13 +7,53 @@
 <div class="banner">⚠ Расчёт использует демонстрационные коэффициенты выбросов (не верифицированные данные). Структура отчёта ориентирована на Implementing Regulation (EU) 2025/2547 и требует верификации по первоисточнику перед использованием в реальной декларации.</div>
 {% endif %}
 
+<h2>Report Template (cbamtrack.com format)</h2>
+<table>
+  <thead><tr><th>Field</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Declarant Name</td><td>{{ cbamtrack_table.declarant_name }}</td></tr>
+    <tr><td>EORI Number</td><td>{{ cbamtrack_table.eori_number }}</td></tr>
+    <tr><td>CN Code</td><td>{{ cbamtrack_table.cn_code }}</td></tr>
+    <tr><td>Product Description</td><td>{{ cbamtrack_table.product_description }}</td></tr>
+    <tr><td>Country of Origin</td><td>{{ cbamtrack_table.country_of_origin }}</td></tr>
+    <tr><td>Quantity (tonnes)</td><td>{{ cbamtrack_table.quantity_t }}</td></tr>
+    <tr><td>Direct Emissions (tCO₂e)</td><td>{{ cbamtrack_table.direct_emissions_t }}</td></tr>
+    <tr><td>Indirect Emissions (tCO₂e)</td><td>{{ cbamtrack_table.indirect_emissions_t }}</td></tr>
+    <tr><td>Total Embedded Emissions (tCO₂e)</td><td>{{ cbamtrack_table.total_embedded_emissions_t }}</td></tr>
+    <tr><td>Emission Factor Source</td><td>{{ cbamtrack_table.emission_factor_source }}</td></tr>
+    <tr><td>Carbon Price Paid</td><td>{{ cbamtrack_table.carbon_price_paid }}</td></tr>
+    <tr><td>Free Allocation</td><td>{{ cbamtrack_table.free_allocation_pct }}</td></tr>
+  </tbody>
+</table>
+<p>Поля EORI Number, Country of Origin и Carbon Price Paid заполняются в профиле компании и на
+первом шаге расчёта — если не заполнены, показывают «—». Free Allocation — официальный график
+фазаута бесплатных квот EU ETS по CBAM Regulation (EU) 2023/956, Art. 31a, для года завершения
+расчёта.</p>
+
 <h2>Данные установки и товара</h2>
 <div class="kv">
   <p><strong>Оператор установки:</strong> {{ company_name }}</p>
   <p><strong>Товар:</strong> {{ product_name }}</p>
   <p><strong>CN-код:</strong> {{ cn_code }}</p>
+  <p><strong>Тип товара (Annex I):</strong> {% if is_complex_good %}сложный (с прекурсорами){% else %}простой{% endif %}</p>
+  {% if processes|length > 1 %}
+  <p><strong>Маршруты производства (усреднено по доле выпуска):</strong></p>
+  <table>
+    <thead><tr><th>Маршрут</th><th>Доля, %</th><th>Коэффициент</th></tr></thead>
+    <tbody>
+      {% for process in processes %}
+      <tr>
+        <td>{{ process.route_name }}</td>
+        <td>{{ process.output_share_pct }}</td>
+        <td>{% if process.used_override %}свой коэффициент{% else %}расчётный{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
   <p><strong>Маршрут производства:</strong> {{ route_name }}</p>
-  <p><strong>Отчётный период:</strong> {{ period }}</p>
+  {% endif %}
+  <p><strong>Отчётный период:</strong> {{ period }} (специализированное поле начала/конца периода не реализовано — см. docs/methodology/cbam-mapping.md)</p>
 </div>
 
 <h2>Встроенные удельные выбросы</h2>
@@ -22,17 +62,41 @@
   <div class="unit">т CO₂-экв. на {{ functional_unit }} товара</div>
 </div>
 <p>Включает: прямые выбросы (Scope 1) + косвенные от потреблённой электроэнергии (Scope 2) +
-выбросы производства сырья-прекурсоров (Scope 3, upstream). Не включает транспорт готовой
-продукции и отходы — они учитываются отдельно в PCF-отчёте для внутренних целей.</p>
+выбросы производства сырья-прекурсоров (Scope 3, upstream), если товар сложный. Не включает
+транспорт готовой продукции и отходы — они учитываются отдельно в PCF-отчёте для внутренних
+целей.</p>
 
 <table>
   <thead><tr><th>Компонент</th><th>Значение, кг CO₂-экв.</th></tr></thead>
   <tbody>
     <tr><td>Прямые выбросы (Scope 1)</td><td>{{ scope1 }}</td></tr>
     <tr><td>Косвенные выбросы от электроэнергии (Scope 2)</td><td>{{ scope2 }}</td></tr>
-    <tr><td>Выбросы сырья-прекурсоров (Scope 3, upstream)</td><td>{{ upstream }}</td></tr>
+    <tr><td>Выбросы сырья-прекурсоров, суммарно (Scope 3, upstream)</td><td>{{ upstream }}</td></tr>
   </tbody>
 </table>
+
+{% if is_complex_good %}
+<h2>Прекурсоры</h2>
+{% if precursors %}
+<table>
+  <thead><tr><th>Сырьё-прекурсор</th><th>Расход, т/ед.</th><th>EF, кг CO₂/т</th><th>Выбросы, кг CO₂-экв./ед.</th></tr></thead>
+  <tbody>
+    {% for row in precursors %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td>{{ row.quantity_t_per_unit }}</td>
+      <td>{{ row.ef_kg_co2_per_t }}</td>
+      <td>{{ row.emissions_kg_co2_per_unit }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Прекурсоры не указаны для этого расчёта.</p>
+{% endif %}
+<p>Собственные CN-коды для каждого прекурсора не хранятся в этой версии — см.
+docs/methodology/cbam-mapping.md, раздел «Не реализовано».</p>
+{% endif %}
 
 <h2>Оценка стоимости</h2>
 <table>

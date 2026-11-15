@@ -113,7 +113,7 @@ _DEMO_CALCULATIONS: list[tuple[str, CalculationInput]] = [
                 )
             ],
             electricity=ElectricityInput(
-                consumption_mwh_per_unit=Decimal("0.2"), region_id="oes_center"
+                consumption_mwh_per_unit=Decimal("0.2"), region_id="pricing_zone_europe_ural"
             ),
         ),
     ),
@@ -131,7 +131,7 @@ _DEMO_CALCULATIONS: list[tuple[str, CalculationInput]] = [
                 ),
             ],
             electricity=ElectricityInput(
-                consumption_mwh_per_unit=Decimal("0.35"), region_id="oes_ural"
+                consumption_mwh_per_unit=Decimal("0.35"), region_id="pricing_zone_europe_ural"
             ),
         ),
     ),
@@ -148,7 +148,7 @@ _DEMO_CALCULATIONS: list[tuple[str, CalculationInput]] = [
                 RawMaterialInput(material_id="co2_feedstock", quantity_t_per_unit=Decimal("0.75")),
             ],
             electricity=ElectricityInput(
-                consumption_mwh_per_unit=Decimal("0.05"), region_id="oes_center"
+                consumption_mwh_per_unit=Decimal("0.05"), region_id="pricing_zone_europe_ural"
             ),
         ),
     ),
@@ -168,7 +168,7 @@ async def _seed_demo_user_and_companies(db) -> None:  # type: ignore[no-untyped-
             inn="7700000000",
             industry="Нефтехимия",
             size="medium",
-            region_id="oes_center",
+            region_id="pricing_zone_europe_ural",
         )
         db.add(company)
         await db.flush()

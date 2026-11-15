@@ -1,5 +1,41 @@
 # Changelog
 
+## Пост-Stage 6 (15.11.2026) — `inner_docs/new_features.md` + CBAM 1:1 с cbamtrack.com
+
+- Мастер, шаг 1 («Продукт»): несколько маршрутов производства одного
+  товара (`CalculationInput.processes`) с долей выпуска и опциональным
+  своим коэффициентом выбросов — усредняются в один
+  CBAM/PCF-результат, см. [cbam.md](methodology/cbam.md).
+- Мастер, шаг 2 («Сырьё и энергия»): несколько видов сырья (backend это
+  уже поддерживал — не хватало UI).
+- CBAM-отчёт (PDF/XLSX/веб) приближен к структуре официального Annex I:
+  построчные прекурсоры, таблица маршрутов, метка «простой/сложный
+  товар» — и затем, по отдельному запросу, добавлена отдельная таблица
+  из 12 полей, повторяющая пример
+  cbamtrack.com/cbam-reporting-template поле-в-поле (Declarant Name,
+  EORI Number, CN Code, Country of Origin, Quantity, Direct/Indirect/
+  Total Embedded Emissions, Emission Factor Source, Carbon Price Paid,
+  Free Allocation) — см. [cbam-mapping.md](methodology/cbam-mapping.md).
+  Новые поля: `Company.country`/`Company.eori` (миграция
+  `78d883ca545b`), `CalculationInput.actual_output_t`/
+  `carbon_price_paid_eur_per_t`. Free Allocation — официальный график
+  фазаута бесплатных квот EU ETS (CBAM Regulation (EU) 2023/956,
+  Art. 31a), не демо-значение.
+- `ecobalance_core/reference.py`: таблица топлива (`FUELS`) расширена
+  8 → 14 позиций и сверена с EU CBAM Guidance Document 3 (Annex D,
+  IPCC 2006 GL) — помечена `is_demo=False`, в отличие от остального
+  справочника. Правило «простой/сложный товар»
+  (`Product.requires_precursor_accounting`) по тому же документу.
+  Регионы энергосистемы (`REGIONS`) переструктурированы с устаревшей
+  группировки «ОЭС» на реальные ценовые/неценовые зоны atsenergo.ru —
+  4 из 5 записей на реальных данных (среднесуточные за один день,
+  не верифицированное годовое значение), см.
+  [emission-factors.md](methodology/emission-factors.md).
+- Новые тесты: `test_processes_and_precursors.py` (многомаршрутное
+  усреднение, кастомный коэффициент, правило прекурсоров),
+  `test_cbam_report_matches_cbamtrack_template` в
+  `test_api_integration.py`.
+
 ## Stages 1–6 — Расчётное ядро, backend, фронтенд, отчёты, документация
 
 - **Stage 1**: `ecobalance_core` — units, Pydantic-модели входа/выхода,

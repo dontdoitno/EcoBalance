@@ -466,6 +466,10 @@ export interface components {
             size?: string | null;
             /** Region Id */
             region_id?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Eori */
+            eori?: string | null;
         };
         /** CompanyOut */
         CompanyOut: {
@@ -479,6 +483,10 @@ export interface components {
             size?: string | null;
             /** Region Id */
             region_id?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Eori */
+            eori?: string | null;
             /**
              * Id
              * Format: uuid
