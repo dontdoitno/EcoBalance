@@ -44,3 +44,6 @@ site/
 
 # CLAUDE
 PROMPT_CLAUDE_CODE.md
+
+# docs
+*inner_docs/

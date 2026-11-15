@@ -51,7 +51,10 @@ async def test_full_calculation_flow(client: AsyncClient) -> None:
             "raw_materials": [
                 {"material_id": "natural_gas_feedstock", "quantity_t_per_unit": "0.6"}
             ],
-            "electricity": {"consumption_mwh_per_unit": "0.2", "region_id": "oes_center"},
+            "electricity": {
+                "consumption_mwh_per_unit": "0.2",
+                "region_id": "pricing_zone_europe_ural",
+            },
             "fuels": [{"fuel_id": "natural_gas", "quantity": "1", "use": "fuel"}],
             "transport": [
                 {
@@ -69,7 +72,7 @@ async def test_full_calculation_flow(client: AsyncClient) -> None:
     calculate_response = await client.post(f"/calculations/{calculation_id}/calculate")
     assert calculate_response.status_code == 200
     result = calculate_response.json()
-    assert result["pcf_full_kg_co2_per_unit"] == "3378.40"
+    assert result["pcf_full_kg_co2_per_unit"] == "3374.89"
     assert result["cbam_applicable"] is True
 
     scenario_response = await client.post(
@@ -109,7 +112,10 @@ async def test_cbam_report_rejected_for_non_applicable_product(client: AsyncClie
         json={
             "product_id": "pvc",
             "raw_materials": [{"material_id": "ethylene_feedstock", "quantity_t_per_unit": "0.45"}],
-            "electricity": {"consumption_mwh_per_unit": "0.35", "region_id": "oes_ural"},
+            "electricity": {
+                "consumption_mwh_per_unit": "0.35",
+                "region_id": "pricing_zone_europe_ural",
+            },
         },
     )
     await client.post(f"/calculations/{calculation_id}/calculate")

@@ -267,6 +267,51 @@ function ReportsContent() {
                 </p>
                 <p className="mt-1 text-sm text-text-faint">{dict.reports.cbamFigureNote}</p>
                 <MetaRow result={result} />
+                <table className="mt-5 w-full text-sm">
+                  <thead className="text-xs text-text-faint">
+                    <tr>
+                      <th className="pb-2 text-left font-medium">Компонент</th>
+                      <th className="pb-2 text-left font-medium">Scope</th>
+                      <th className="pb-2 text-right font-medium">Значение, кг CO₂-экв.</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {result.breakdown
+                      .filter((item) => item.category !== "transport" && item.category !== "waste")
+                      .map((item) => (
+                        <tr key={item.category}>
+                          <td className="py-3 font-medium text-text">{item.label}</td>
+                          <td className="py-3 text-text-faint">{item.scope}</td>
+                          <td className="py-3 text-right text-text">{formatKgCo2(Number(item.value_kg_co2_per_unit))}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {result.processes.length > 1 && (
+                  <div className="mt-5 border-t border-border pt-4">
+                    <p className="text-xs text-text-faint">Маршруты производства (усреднено по доле выпуска)</p>
+                    <table className="mt-2 w-full text-sm">
+                      <thead className="text-xs text-text-faint">
+                        <tr>
+                          <th className="pb-2 text-left font-medium">Маршрут</th>
+                          <th className="pb-2 text-right font-medium">Доля, %</th>
+                          <th className="pb-2 text-right font-medium">Коэффициент</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {result.processes.map((process) => (
+                          <tr key={process.route_id}>
+                            <td className="py-2 text-text">{process.route_name}</td>
+                            <td className="py-2 text-right text-text">{process.output_share_pct}</td>
+                            <td className="py-2 text-right text-text-faint">
+                              {process.used_override ? "свой коэффициент" : "расчётный"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </>
             ) : (
               <div className="mt-5">

@@ -6,8 +6,24 @@ All component terms are already expressed per functional unit (M_product
 == 1 functional unit), so the division is implicit. `cbam_embedded`
 excludes finished-product transport and waste, per §5.2 — only direct,
 indirect, and upstream-precursor emissions count toward embedded
-emissions. In this MVP's demo catalog every raw material on a
-CBAM-applicable product is treated as a precursor.
+emissions. Precursor emissions are only included for "complex goods"
+(`Product.requires_precursor_accounting`); per the 'Simple goods'
+definition in EU CBAM Guidance No.3, a simple good is zeroed out here. In
+this MVP's demo catalog every raw material on a CBAM-applicable product is
+treated as a precursor, and all current CBAM products are complex goods
+(fertilisers).
+
+Multi-route calculations (`CalculationInput.processes`): per EU CBAM
+Guidance No.3 ("Treatment of Production Routes (Averaging)"), emissions for
+one good produced via several routes are averaged, weighted by each
+route's share of output. Each route may supply its own total coefficient
+(`ef_override_kg_co2_per_unit`); if it doesn't, it falls back to this
+calculation's shared base figure (computed once below from the shared
+fuels/raw_materials/electricity/etc. inputs — those are not split per
+route). This averaging is applied to `cbam_embedded`/`pcf_full` only: there
+is no sound way to re-derive a Scope 1/2/3 split for a manually entered
+override, so the Scope breakdown always reflects the shared base
+calculation, not a per-route split.
 """
 
 from __future__ import annotations
@@ -16,13 +32,74 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from ecobalance_core import hotspots, reference, scope1, scope2, scope3
 from ecobalance_core.allocation import allocate
-from ecobalance_core.models import BreakdownItem, CalculationInput, CalculationResult
+from ecobalance_core.models import (
+    BreakdownItem,
+    CalculationInput,
+    CalculationResult,
+    ProcessResultItem,
+)
 
 _ROUND_2DP = Decimal("0.01")
 
 
 def _round(value: Decimal) -> Decimal:
     return value.quantize(_ROUND_2DP, rounding=ROUND_HALF_UP)
+
+
+def _weighted_processes(
+    calculation_input: CalculationInput, base_embedded: Decimal | None, base_pcf: Decimal
+) -> tuple[Decimal | None, Decimal, list[ProcessResultItem]]:
+    """Blend `base_embedded`/`base_pcf` across `processes` by output share.
+
+    Returns the (possibly re-weighted) embedded/pcf totals plus the
+    per-route breakdown for the report. If there are no extra processes,
+    the base totals pass through unchanged and the list is empty.
+    """
+    processes = calculation_input.processes
+    if not processes:
+        return base_embedded, base_pcf, []
+
+    total_share = sum((p.output_share_pct for p in processes), start=Decimal("0"))
+    if total_share <= 0:
+        total_share = Decimal(len(processes))
+        shares = [Decimal("1") for _ in processes]
+    else:
+        shares = [p.output_share_pct for p in processes]
+
+    embedded_sum = Decimal("0")
+    pcf_sum = Decimal("0")
+    items: list[ProcessResultItem] = []
+    for process, share in zip(processes, shares, strict=True):
+        weight = share / total_share
+        route_embedded = (
+            process.ef_override_kg_co2_per_unit
+            if process.ef_override_kg_co2_per_unit is not None
+            else base_embedded
+        )
+        route_pcf = (
+            process.ef_override_kg_co2_per_unit
+            if process.ef_override_kg_co2_per_unit is not None
+            else base_pcf
+        )
+        if route_embedded is not None:
+            embedded_sum += route_embedded * weight
+        pcf_sum += route_pcf * weight
+
+        route = reference.get_route(process.route_id)
+        items.append(
+            ProcessResultItem(
+                route_id=process.route_id,
+                route_name=route.name,
+                output_share_pct=_round(weight * Decimal(100)),
+                used_override=process.ef_override_kg_co2_per_unit is not None,
+                cbam_embedded_kg_co2_per_unit=(
+                    _round(route_embedded) if route_embedded is not None else None
+                ),
+            )
+        )
+
+    embedded_total = embedded_sum if base_embedded is not None else None
+    return embedded_total, pcf_sum, items
 
 
 def calculate(calculation_input: CalculationInput) -> CalculationResult:
@@ -32,18 +109,25 @@ def calculate(calculation_input: CalculationInput) -> CalculationResult:
 
     allocation_result = allocate(calculation_input)
 
+    product = reference.get_product(calculation_input.product_id)
+
+    upstream_for_cbam = (
+        s3.upstream_kg_co2_per_unit if product.requires_precursor_accounting else Decimal("0")
+    )
+
     gross = s1.total_kg_co2_per_unit + s2.total_kg_co2_per_unit + s3.total_kg_co2_per_unit
     allocated = gross * allocation_result.factor
     pcf_full = allocated - allocation_result.credit_kg_co2_per_unit
 
-    embedded_gross = (
-        s1.total_kg_co2_per_unit + s2.total_kg_co2_per_unit + s3.upstream_kg_co2_per_unit
-    )
+    embedded_gross = s1.total_kg_co2_per_unit + s2.total_kg_co2_per_unit + upstream_for_cbam
     embedded_allocated = embedded_gross * allocation_result.factor
 
-    product = reference.get_product(calculation_input.product_id)
     cbam_applicable = product.cbam_applicable
-    cbam_embedded = _round(embedded_allocated) if cbam_applicable else None
+    base_cbam_embedded = embedded_allocated if cbam_applicable else None
+    cbam_embedded, pcf_full, process_items = _weighted_processes(
+        calculation_input, base_cbam_embedded, pcf_full
+    )
+    cbam_embedded = _round(cbam_embedded) if cbam_embedded is not None else None
     cbam_not_applicable_reason = (
         None
         if cbam_applicable
@@ -98,6 +182,7 @@ def calculate(calculation_input: CalculationInput) -> CalculationResult:
         scope1_kg_co2_per_unit=_round(s1.total_kg_co2_per_unit),
         scope2_kg_co2_per_unit=_round(s2.total_kg_co2_per_unit),
         scope3_kg_co2_per_unit=_round(s3.total_kg_co2_per_unit),
+        processes=process_items,
         breakdown=breakdown,
         hotspots=hotspot_list,
         allocation_factor=_round(allocation_result.factor),

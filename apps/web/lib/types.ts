@@ -37,6 +37,14 @@ export interface Hotspot {
   flags: HotspotFlag[];
 }
 
+export interface ProcessResultItem {
+  route_id: string;
+  route_name: string;
+  output_share_pct: string;
+  used_override: boolean;
+  cbam_embedded_kg_co2_per_unit: string | null;
+}
+
 export interface CalculationResult {
   pcf_full_kg_co2_per_unit: string;
   cbam_embedded_kg_co2_per_unit: string | null;
@@ -45,6 +53,7 @@ export interface CalculationResult {
   scope1_kg_co2_per_unit: string;
   scope2_kg_co2_per_unit: string;
   scope3_kg_co2_per_unit: string;
+  processes: ProcessResultItem[];
   breakdown: BreakdownItem[];
   hotspots: Hotspot[];
   allocation_factor: string;
@@ -80,6 +89,7 @@ export interface Product {
   cbam_applicable: boolean;
   cn_code: string | null;
   default_routes: string[];
+  requires_precursor_accounting: boolean;
 }
 
 export interface Route {

@@ -31,9 +31,16 @@ interface TransportRow {
   mass_t_per_unit: string;
 }
 
+interface ProcessRow {
+  route_id: string;
+  output_share_pct: string;
+  ef_override: string;
+}
+
 interface WizardForm {
   product_id: string;
   route_id: string;
+  processes: ProcessRow[];
   raw_materials: RawMaterialRow[];
   electricity_mwh: string;
   region_id: string;
@@ -43,6 +50,7 @@ interface WizardForm {
 const EMPTY_FORM: WizardForm = {
   product_id: "",
   route_id: "",
+  processes: [],
   raw_materials: [{ material_id: "", quantity_t_per_unit: "" }],
   electricity_mwh: "",
   region_id: "",
@@ -82,6 +90,15 @@ export default function CalculationWizardPage() {
       setForm({
         product_id: (input.product_id as string) ?? "",
         route_id: (input.route_id as string) ?? "",
+        processes: (
+          input.processes as
+            | { route_id: string; output_share_pct: string; ef_override_kg_co2_per_unit?: string }[]
+            | undefined
+        )?.map((p) => ({
+          route_id: p.route_id,
+          output_share_pct: p.output_share_pct ?? "",
+          ef_override: p.ef_override_kg_co2_per_unit ?? "",
+        })) ?? [],
         raw_materials:
           (input.raw_materials as RawMaterialRow[] | undefined)?.length
             ? (input.raw_materials as RawMaterialRow[])
@@ -102,6 +119,13 @@ export default function CalculationWizardPage() {
     return {
       product_id: form.product_id,
       route_id: form.route_id || undefined,
+      processes: form.processes
+        .filter((row) => row.route_id)
+        .map((row) => ({
+          route_id: row.route_id,
+          output_share_pct: row.output_share_pct || "100",
+          ef_override_kg_co2_per_unit: row.ef_override || undefined,
+        })),
       raw_materials: form.raw_materials
         .filter((row) => row.material_id && row.quantity_t_per_unit)
         .map((row) => ({ material_id: row.material_id, quantity_t_per_unit: row.quantity_t_per_unit })),
@@ -245,6 +269,76 @@ export default function CalculationWizardPage() {
                 </Select>
               </div>
             )}
+            {form.processes.map((process, index) => (
+              <div key={index} className="space-y-3 rounded-lg border border-border p-3">
+                <div className="flex items-end gap-3">
+                  <Select
+                    value={process.route_id}
+                    onChange={(e) => {
+                      const processes = [...form.processes];
+                      processes[index] = { ...process, route_id: e.target.value };
+                      setForm({ ...form, processes });
+                    }}
+                  >
+                    <option value="">{dict.wizard.selectRoute}</option>
+                    {availableRoutes.map((route) => (
+                      <option key={route.id} value={route.id}>
+                        {route.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder={dict.wizard.routeShare}
+                    className="w-40"
+                    value={process.output_share_pct}
+                    onChange={(e) => {
+                      const processes = [...form.processes];
+                      processes[index] = { ...process, output_share_pct: e.target.value };
+                      setForm({ ...form, processes });
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    onClick={() =>
+                      setForm({ ...form, processes: form.processes.filter((_, i) => i !== index) })
+                    }
+                  >
+                    {dict.wizard.remove}
+                  </Button>
+                </div>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={dict.wizard.customCoefficient}
+                  value={process.ef_override}
+                  onChange={(e) => {
+                    const processes = [...form.processes];
+                    processes[index] = { ...process, ef_override: e.target.value };
+                    setForm({ ...form, processes });
+                  }}
+                />
+              </div>
+            ))}
+            {form.route_id && (
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() =>
+                  setForm({
+                    ...form,
+                    processes: [
+                      ...form.processes,
+                      { route_id: "", output_share_pct: "", ef_override: "" },
+                    ],
+                  })
+                }
+              >
+                {dict.wizard.addRoute}
+              </Button>
+            )}
           </div>
         )}
 
@@ -257,50 +351,69 @@ export default function CalculationWizardPage() {
               </p>
             </div>
             <div>
-              <Label htmlFor="material">{dict.wizard.rawMaterial}</Label>
-              <div className="flex gap-3">
-                <Select
-                  id="material"
-                  value={form.raw_materials[0]?.material_id ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      raw_materials: [
-                        {
-                          material_id: e.target.value,
-                          quantity_t_per_unit: form.raw_materials[0]?.quantity_t_per_unit ?? "",
-                        },
-                      ],
-                    })
-                  }
-                >
-                  <option value="">Не выбрано</option>
-                  {rawMaterials?.map((material) => (
-                    <option key={material.id} value={material.id}>
-                      {material.name}
-                    </option>
-                  ))}
-                </Select>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder={dict.wizard.rawMaterialAmount}
-                  className="w-48"
-                  value={form.raw_materials[0]?.quantity_t_per_unit ?? ""}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      raw_materials: [
-                        {
-                          material_id: form.raw_materials[0]?.material_id ?? "",
-                          quantity_t_per_unit: e.target.value,
-                        },
-                      ],
-                    })
-                  }
-                />
+              <Label>{dict.wizard.rawMaterial}</Label>
+              <div className="space-y-3">
+                {form.raw_materials.map((row, index) => (
+                  <div key={index} className="flex items-end gap-3">
+                    <Select
+                      value={row.material_id}
+                      onChange={(e) => {
+                        const raw_materials = [...form.raw_materials];
+                        raw_materials[index] = { ...row, material_id: e.target.value };
+                        setForm({ ...form, raw_materials });
+                      }}
+                    >
+                      <option value="">Не выбрано</option>
+                      {rawMaterials?.map((material) => (
+                        <option key={material.id} value={material.id}>
+                          {material.name}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder={dict.wizard.rawMaterialAmount}
+                      className="w-48"
+                      value={row.quantity_t_per_unit}
+                      onChange={(e) => {
+                        const raw_materials = [...form.raw_materials];
+                        raw_materials[index] = { ...row, quantity_t_per_unit: e.target.value };
+                        setForm({ ...form, raw_materials });
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          raw_materials: form.raw_materials.filter((_, i) => i !== index),
+                        })
+                      }
+                    >
+                      {dict.wizard.remove}
+                    </Button>
+                  </div>
+                ))}
               </div>
               <FieldHint>{dict.wizard.rawMaterialAmount}</FieldHint>
+              <Button
+                variant="secondary"
+                type="button"
+                className="mt-3"
+                onClick={() =>
+                  setForm({
+                    ...form,
+                    raw_materials: [
+                      ...form.raw_materials,
+                      { material_id: "", quantity_t_per_unit: "" },
+                    ],
+                  })
+                }
+              >
+                {dict.wizard.addRawMaterial}
+              </Button>
             </div>
             <div>
               <Label htmlFor="electricity">{dict.wizard.electricity}</Label>
@@ -412,9 +525,19 @@ export default function CalculationWizardPage() {
               value={products?.find((p) => p.id === form.product_id)?.name ?? "Не указано"}
             />
             <ReviewRow
+              label={dict.wizard.selectRoute}
+              value={
+                form.processes.length > 0
+                  ? `${1 + form.processes.length} маршрута`
+                  : availableRoutes.find((r) => r.id === form.route_id)?.name ?? "Не указано"
+              }
+            />
+            <ReviewRow
               label={dict.wizard.rawMaterial}
               value={
-                rawMaterials?.find((m) => m.id === form.raw_materials[0]?.material_id)?.name ?? "Не указано"
+                form.raw_materials.filter((r) => r.material_id).length > 0
+                  ? `${form.raw_materials.filter((r) => r.material_id).length} вид(ов)`
+                  : "Не указано"
               }
             />
             <ReviewRow label={dict.wizard.electricity} value={form.electricity_mwh || "Не указано"} />

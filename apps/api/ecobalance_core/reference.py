@@ -77,6 +77,13 @@ class Product:
     cbam_applicable: bool
     cn_code: str | None
     default_routes: tuple[str, ...]
+    # Per the 'Simple goods'/'Complex goods' definitions in EU CBAM Guidance
+    # No.3: a simple good is produced exclusively from precursors and fuels
+    # with zero embedded emissions, so precursor emissions are not counted.
+    # Complex goods (e.g. cement, fertilisers) must include precursor
+    # embedded emissions. All current CBAM products in this demo catalog
+    # are fertiliser-category complex goods.
+    requires_precursor_accounting: bool = True
 
 
 @dataclass(frozen=True)
@@ -89,6 +96,16 @@ class Route:
 # --- Fuels -------------------------------------------------------------
 # NCV: natural gas/thousand m3 figures as MJ per thousand m3 (so "per unit"
 # below means per thousand m3 for gas, per tonne for solids/liquids).
+#
+# EF/NCV values are sourced from EU CBAM Guidance Document 3, Annex D,
+# Table 4-7 (Standard values for fuel emission factors, IPCC 2006
+# Guidelines) — t CO2/TJ is numerically equal to kg CO2/GJ, and
+# NCV TJ/Gg is numerically equal to GJ/t (= 1000 MJ/t). `biomass` is kept
+# at EF=0 under the GHG Protocol biogenic-CO2 convention: IPCC's "preliminary
+# EF" for biomass (Table 4-8) is the pre-biogenic-correction figure and is
+# intentionally not copied here. Entries carrying this source are
+# `is_demo=False`; everything else in this file remains illustrative.
+_IPCC_SOURCE = "EU CBAM Guidance No.3 Annex D (IPCC 2006 GL)"
 FUELS: tuple[FuelFactor, ...] = (
     FuelFactor(
         "natural_gas",
@@ -96,16 +113,137 @@ FUELS: tuple[FuelFactor, ...] = (
         "thousand_m3",
         Decimal("34000"),
         Decimal("56.1"),
-        "demo",
-        2024,
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
     ),
-    FuelFactor("naphtha", "Нафта", "t", Decimal("44000"), Decimal("73.3"), "demo", 2024),
-    FuelFactor("coal", "Уголь", "t", Decimal("24000"), Decimal("95.8"), "demo", 2024),
-    FuelFactor("mazut", "Мазут", "t", Decimal("40400"), Decimal("77.4"), "demo", 2024),
-    FuelFactor("diesel", "Дизельное топливо", "t", Decimal("43000"), Decimal("74.1"), "demo", 2024),
-    FuelFactor("propane", "Пропан", "t", Decimal("46000"), Decimal("63.1"), "demo", 2024),
+    FuelFactor(
+        "naphtha",
+        "Нафта",
+        "t",
+        Decimal("44500"),
+        Decimal("73.3"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    FuelFactor(
+        "coal",
+        "Уголь (битуминозный)",
+        "t",
+        Decimal("25800"),
+        Decimal("94.6"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    FuelFactor(
+        "mazut",
+        "Мазут (топочный)",
+        "t",
+        Decimal("40400"),
+        Decimal("77.4"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    FuelFactor(
+        "diesel",
+        "Дизельное топливо (газойль)",
+        "t",
+        Decimal("43000"),
+        Decimal("74.1"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    FuelFactor(
+        "propane",
+        "Пропан (СУГ)",
+        "t",
+        Decimal("47300"),
+        Decimal("63.1"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
     FuelFactor("hydrogen", "Водород", "t", Decimal("120000"), Decimal("0"), "demo", 2024),
-    FuelFactor("biomass", "Биомасса", "t", Decimal("15000"), Decimal("0"), "demo", 2024),
+    FuelFactor(
+        "biomass",
+        "Биомасса (сжигание)",
+        "t",
+        Decimal("15600"),
+        Decimal("0"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    # Additional solid/process fuels relevant to CBAM precursor chains
+    # (cement, iron/steel, fertilisers) per the same Annex D table.
+    FuelFactor(
+        "anthracite",
+        "Антрацит",
+        "t",
+        Decimal("26700"),
+        Decimal("98.3"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    FuelFactor(
+        "lignite",
+        "Лигнит (бурый уголь)",
+        "t",
+        Decimal("11900"),
+        Decimal("101.0"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    FuelFactor(
+        "peat",
+        "Торф",
+        "t",
+        Decimal("9760"),
+        Decimal("106.0"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    FuelFactor(
+        "petroleum_coke",
+        "Нефтяной кокс",
+        "t",
+        Decimal("32500"),
+        Decimal("97.5"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    # Blast furnace gas / coke oven gas: IPCC Annex D gives NCV on a mass
+    # basis (TJ/Gg = MJ/t); no reliable gas-density figure is used here to
+    # convert to a volumetric unit, so these stay mass-based ("t") like the
+    # solid fuels above, unlike `natural_gas`'s "thousand_m3" convention.
+    FuelFactor(
+        "blast_furnace_gas",
+        "Доменный газ",
+        "t",
+        Decimal("2470"),
+        Decimal("260"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
+    FuelFactor(
+        "coke_oven_gas",
+        "Коксовый газ",
+        "t",
+        Decimal("38700"),
+        Decimal("44.4"),
+        _IPCC_SOURCE,
+        2006,
+        is_demo=False,
+    ),
 )
 
 # --- Raw materials (upstream, Scope 3) ---------------------------------
@@ -130,16 +268,63 @@ RAW_MATERIALS: tuple[RawMaterialFactor, ...] = (
     ),
 )
 
-# --- Electricity regions (ОЭС) -----------------------------------------
+# --- Electricity regions ------------------------------------------------
+# Restructured from the old generic "ОЭС" (unified power system) grouping
+# to atsenergo.ru's actual price/non-price zone structure
+# (atsenergo.ru/results/co2all — "Коэффициент выбросов парниковых газов
+# энергосистемы России"). The four zones below carry real figures: daily
+# average of the hourly CO2e factor (к CO2e/MWh, includes CO2+CH4+N2O)
+# from the site's "Плановые значения" hourly export for 2026-11-15
+# (file: CARBON_plan_hour_15.11.2026_15.11.2026.csv). This is a single
+# day's planned average, not a verified annual figure — treat as a
+# realistic order-of-magnitude placeholder pending a proper
+# monthly/annual "Фактические значения" pull. The remaining non-price
+# zones the site publishes (НЦЗ Архангельской области, НЦЗ Республики
+# Коми, изолированные ТИТЭС Камчатского края/Сахалинской области/
+# Магаданской области/Чукотского АО) were not in that export and stay a
+# single demo placeholder below pending a dedicated pull.
+_ATSENERGO_SOURCE = "АТС (atsenergo.ru/results/co2all), план на 15.11.2026"
 REGIONS: tuple[RegionFactor, ...] = (
-    RegionFactor("oes_center", "ОЭС Центра", Decimal("350"), "demo", 2024),
-    RegionFactor("oes_northwest", "ОЭС Северо-Запада", Decimal("320"), "demo", 2024),
-    RegionFactor("oes_south", "ОЭС Юга", Decimal("450"), "demo", 2024),
-    RegionFactor("oes_middle_volga", "ОЭС Средней Волги", Decimal("380"), "demo", 2024),
-    RegionFactor("oes_ural", "ОЭС Урала", Decimal("580"), "demo", 2024),
-    RegionFactor("oes_siberia", "ОЭС Сибири", Decimal("420"), "demo", 2024),
-    RegionFactor("oes_east", "ОЭС Востока", Decimal("460"), "demo", 2024),
-    RegionFactor("isolated", "Изолированные энергосистемы", Decimal("650"), "demo", 2024),
+    RegionFactor(
+        "pricing_zone_europe_ural",
+        "Первая ЦЗ (Европа и Урал)",
+        Decimal("332.44"),
+        _ATSENERGO_SOURCE,
+        2026,
+        is_demo=False,
+    ),
+    RegionFactor(
+        "pricing_zone_siberia",
+        "Вторая ЦЗ (Сибирь)",
+        Decimal("452.09"),
+        _ATSENERGO_SOURCE,
+        2026,
+        is_demo=False,
+    ),
+    RegionFactor(
+        "pricing_zone_vostok",
+        "Вторая ЦЗ (Восток)",
+        Decimal("517.93"),
+        _ATSENERGO_SOURCE,
+        2026,
+        is_demo=False,
+    ),
+    RegionFactor(
+        "ncz_kaliningrad",
+        "НЦЗ Калининградской области",
+        Decimal("561.26"),
+        _ATSENERGO_SOURCE,
+        2026,
+        is_demo=False,
+    ),
+    RegionFactor(
+        "isolated",
+        "Прочие неценовые/изолированные зоны (Архангельская обл., Коми, Камчатка, "
+        "Сахалин, Магадан, Чукотка) — требует проверки по atsenergo.ru",
+        Decimal("650"),
+        "demo",
+        2024,
+    ),
 )
 
 # --- Transport -----------------------------------------------------------
@@ -287,3 +472,10 @@ def get_product(product_id: str) -> Product:
         if product.id == product_id:
             return product
     raise KeyError(f"Unknown product id: {product_id!r}")
+
+
+def get_route(route_id: str) -> Route:
+    for route in ROUTES:
+        if route.id == route_id:
+            return route
+    raise KeyError(f"Unknown route id: {route_id!r}")

@@ -98,6 +98,22 @@ class WasteStreamInput(BaseModel):
     wastewater_m3_per_unit: Decimal = Decimal("0")
 
 
+class ProcessInput(BaseModel):
+    """A single production route contributing to a multi-route calculation.
+
+    Per EU CBAM Guidance No.3 ("Treatment of Production Routes (Averaging)"),
+    emissions for goods with the same functional unit produced via several
+    routes within one installation are averaged, weighted by each route's
+    share of output. `ef_override_kg_co2_per_unit` lets the user type a
+    known total coefficient for that route instead of relying on the shared
+    fuels/raw_materials/electricity inputs.
+    """
+
+    route_id: str
+    output_share_pct: Decimal = Field(gt=0, default=Decimal("100"))
+    ef_override_kg_co2_per_unit: Decimal | None = None
+
+
 class CoProductInput(BaseModel):
     name: str
     quantity_t_per_year: Decimal = Field(gt=0)
@@ -133,6 +149,7 @@ class DataQualityInput(BaseModel):
 class CalculationInput(BaseModel):
     product_id: str
     route_id: str | None = None
+    processes: list[ProcessInput] = Field(default_factory=list)
     annual_capacity_t: Decimal | None = None
     actual_output_t: Decimal = Field(gt=0, default=Decimal("1"))
     functional_unit: FunctionalUnit = "t"
@@ -184,6 +201,14 @@ class Hotspot(BaseModel):
     flags: list[HotspotFlag] = Field(default_factory=list)
 
 
+class ProcessResultItem(BaseModel):
+    route_id: str
+    route_name: str
+    output_share_pct: Decimal
+    used_override: bool
+    cbam_embedded_kg_co2_per_unit: Decimal | None
+
+
 class CalculationResult(BaseModel):
     pcf_full_kg_co2_per_unit: Decimal
     cbam_embedded_kg_co2_per_unit: Decimal | None
@@ -193,6 +218,8 @@ class CalculationResult(BaseModel):
     scope1_kg_co2_per_unit: Decimal
     scope2_kg_co2_per_unit: Decimal
     scope3_kg_co2_per_unit: Decimal
+
+    processes: list[ProcessResultItem] = Field(default_factory=list)
 
     breakdown: list[BreakdownItem]
     hotspots: list[Hotspot]
